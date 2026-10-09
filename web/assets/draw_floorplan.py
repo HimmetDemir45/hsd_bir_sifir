@@ -1,6 +1,15 @@
-"""web/floorplan.png üretir (760x500). Bölge poligonları config.yaml ile AYNI kalır:
-kantin (50,50)-(300,200), koridor_1 (320,50)-(700,120), spor_salonu (50,220)-(400,450), bahce (420,220)-(700,450).
-Bölge adı ve olay sayısını app.js her bölgenin ortasına yazar: o alanlar boş bırakılır.
+"""web/floorplan.png üretir (760x500 tuval koordinatları).
+
+DİKKAT: Oda/bölge koordinatları İKİ yerde tutulur: bu betikte (duvarlar) ve B'nin config.yaml -> zones
+(poligonlar). Birini değiştiren diğerine haber vermeli, yoksa ısı haritası odalardan kayar.
+
+Büyük bölgeler (config.yaml zones):
+  kantin (50,50)-(300,200), koridor_1 (320,50)-(700,120), spor_salonu (50,220)-(400,450), bahce (420,220)-(700,450)
+Sınıf şeridi odaları da bölge (B ısı haritasında çizer). Duvar iç yüzleri: üst y=128, alt y=207;
+ara duvarlar x=410/510/600/650 (2.5 px), sol x=312, sağ x=707. Önerilen poligonlar (duvardan ~4 px içeride):
+  Sınıf 1-A (316,132)-(406,203)   Sınıf 1-B (414,132)-(506,203)   Rehberlik (514,132)-(596,203)
+  Müdür Yrd. (604,132)-(646,203)  WC (654,132)-(703,203)
+Bölge merkezine app.js ad/sayı veya rozet çizer: merkezler boş bırakılır; küçük odaların adı alt kenarda.
 Kullanım (proje kökünden): python web/assets/draw_floorplan.py web/floorplan.png
 Gerekli: Pillow (matplotlib/ultralytics ile zaten gelir), Windows Bahnschrift fontu.
 """
@@ -134,10 +143,11 @@ for i in range(18):
     x = 330 + i * 20
     rect(x, 54, x + 17, 62, r=1)
 
-# ---------------- Sınıf şeridi (310..710, 130..210): bölge değil, etiketli ----------------
+# ---------------- Sınıf şeridi (310..710, 128..207): her oda bir bölge (config.yaml zones) ----------------
+# Oda adları planda kalır ama ALT kenarda: merkez, app.js'in ısı rozeti/etiketi için boş
 rooms = [(310, 410, "Sınıf 1-A"), (410, 510, "Sınıf 1-B"), (510, 600, "Rehberlik"), (600, 650, "Müdür Yrd."), (650, 710, "WC")]
 for x1, x2, name in rooms:
-    text((x1 + x2) / 2, 172, name, 10 if len(name) < 10 else 9)
+    text((x1 + x2) / 2, 199, name, 10 if len(name) < 10 else 9)
 for x in (410, 510, 600, 650):
     wall([(x, 130), (x, 210)], 2.5, INNER)
 # sıralar (sınıflarda)
