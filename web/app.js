@@ -105,6 +105,23 @@ function drawHeatmap(counts) {
     planCtx.stroke();
     const xs = z.polygon.map((p) => p[0]), ys = z.polygon.map((p) => p[1]);
     const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+    if (z.compact) {
+      // Dar oda: ad planın üstünde zaten yazılı; sadece olay sayısını küçük bir rozet olarak çiz (0 ise hiçbir şey)
+      if (n > 0) {
+        const by = Math.max(...ys) - 11;
+        planCtx.beginPath();
+        planCtx.arc(cx, by, 10, 0, Math.PI * 2);
+        planCtx.fillStyle = "#222";
+        planCtx.fill();
+        planCtx.fillStyle = "#fff";
+        planCtx.textAlign = "center";
+        planCtx.textBaseline = "middle";
+        planCtx.font = "bold 12px system-ui, sans-serif";
+        planCtx.fillText(String(n), cx, by + 1);
+        planCtx.textBaseline = "alphabetic";
+      }
+      continue;
+    }
     planCtx.fillStyle = "#222";
     planCtx.textAlign = "center";
     planCtx.font = "bold 15px system-ui, sans-serif";
