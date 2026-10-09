@@ -44,6 +44,16 @@ except ImportError:
 JPEG_QUALITY = 70
 
 
+def shrink(frame, max_side: int):
+    """Uzun kenar max_side'dan büyükse oranı koruyarak küçültür (0 = kapalı). Küçük kareye dokunmaz."""
+    h, w = frame.shape[:2]
+    longest = max(h, w)
+    if max_side <= 0 or longest <= max_side:
+        return frame
+    scale = max_side / longest
+    return cv2.resize(frame, (round(w * scale), round(h * scale)), interpolation=cv2.INTER_AREA)
+
+
 def camera_loop(cfg: dict, cam_cfg: dict, source: str, events: "queue.Queue[Event]",
                 frames: FrameStore, pose_holder: dict, stop: threading.Event,
                 clip_buf: "ClipBuffer | None" = None) -> None:
@@ -58,6 +68,7 @@ def camera_loop(cfg: dict, cam_cfg: dict, source: str, events: "queue.Queue[Even
     pose_holder[zone_id] = pose
     camera = Camera(source, loop_file=True)
     min_dt = 1.0 / cfg["general"]["target_fps"]
+    max_side = int(cfg["general"].get("max_frame_side", 0))
     n_frames, fps_t0 = 0, time.time()
     last_blur_err = 0.0
     try:
@@ -68,6 +79,7 @@ def camera_loop(cfg: dict, cam_cfg: dict, source: str, events: "queue.Queue[Even
                 print("[camera] kare gelmiyor, tekrar deneniyor...")
                 time.sleep(0.5)
                 continue
+            frame = shrink(frame, max_side)  # tüm aşamalar (silah, poz, bulanıklaştırma, klip, JPEG) küçük karede
             w_dets, _ = weapon.process(frame, camera.last_ts)
             tracks, _ = pose.process(frame, camera.last_ts)
             weapon.draw(frame, w_dets)
@@ -121,6 +133,8 @@ def main() -> None:
     ap.add_argument("--demo", action="store_true", help="kamera yerine hazır sahte senaryo")
     ap.add_argument("--speed", type=float, default=1.0, help="--demo zaman hızlandırma")
     ap.add_argument("--db", default="storage/events.db")
+    ap.add_argument("--max-side", type=int, default=None,
+                    help="kare uzun kenarı üst sınırı, piksel (config general.max_frame_side'ı ezer, 0 = kapalı)")
     ap.add_argument("--fresh", action="store_true", help="başlamadan önce DB'yi sil (temiz demo)")
     ap.add_argument("--port", type=int, default=None, help="config api.port'u ezer (8000 doluysa)")
     args = ap.parse_args()
@@ -128,6 +142,8 @@ def main() -> None:
     cfg = load_config()
     if args.port:
         cfg["api"]["port"] = args.port
+    if args.max_side is not None:
+        cfg["general"]["max_frame_side"] = args.max_side
     cam_cfg = cfg["cameras"][0]
     events: "queue.Queue[Event]" = queue.Queue()
     stop = threading.Event()
