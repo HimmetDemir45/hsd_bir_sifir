@@ -14,7 +14,7 @@
         <path d="M10 18.5h3l1.6-4 2.6 7 1.8-3h3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       <div class="brand-text">
-        <h1>OkulKalkan</h1>
+        <h1>OkulKalkan <span id="demoTag" class="demo-tag" title="Sahte olaylarla senaryo oynatılıyor; gerçek kamera ve bildirim yok" hidden>Demo</span></h1>
         <p class="brand-sub">Okul güvenliği erken uyarı</p>
       </div>
     </div>
@@ -34,13 +34,30 @@
       <button id="soundBtn" class="sound off" type="button">Alarm sesi kapalı (açmak için tıkla)</button>
     </div>
   </header>
+
+  <!-- Bağlantı koptuğunda görünür (CSS: #conn.off). Metin statik, JS gerekmez. -->
+  <div class="offline-banner" role="status">
+    <strong>Sunucu bağlantısı koptu.</strong> Yeniden bağlanılıyor… Bu sırada yeni uyarılar ekrana gelmez.
+  </div>
+
   <main>
     <section class="video">
-      <h2>Canlı görüntü</h2>
-      <img id="cam" src="/video/cam1" alt="Canlı kamera">
+      <div class="panel-head">
+        <h2>Canlı görüntü</h2>
+        <span class="panel-meta">Kamera 1 · yüzler bulanık</span>
+      </div>
+      <div class="cam-wrap">
+        <div class="cam-wait" aria-hidden="true">
+          <span class="cam-wait-title">Görüntü bekleniyor</span>
+          <span>Kamera bağlantısı kuruluyor…</span>
+        </div>
+        <img id="cam" src="/video/cam1" alt="Canlı kamera görüntüsü (yüzler bulanık)">
+      </div>
     </section>
     <section class="feed">
-      <h2>Uyarılar <span id="count"></span></h2>
+      <div class="panel-head">
+        <h2>Uyarılar <span id="count"></span></h2>
+      </div>
       <ul id="alerts"></ul>
     </section>
   </main>
