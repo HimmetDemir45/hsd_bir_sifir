@@ -5,6 +5,8 @@ general:
   device: cpu            # cpu | cuda
   imgsz: 640             # 480–640 arası; CPU yavaşsa 480 yapın
   target_fps: 8          # işleme hızı üst sınırı
+  torch_threads: 4       # CPU çekirdek sınırı (0 = sınırsız). 8 -> 21 FPS / 8.2 çekirdek, 4 -> 16 FPS / 4.6 çekirdek
+  max_frame_side: 960    # kare okunur okunmaz uzun kenarı bu piksele küçültülür (0 = kapalı); büyük videolarda FPS'i artırır
   snapshot_dir: snapshots
   clip_dir: clips
   clip_pre_ratio: 0.5    # klibin ne kadarı uyarıdan ÖNCE (0.5 -> 10 sn klipte 5 sn önce + 5 sn sonra)
@@ -87,6 +89,7 @@ audio:
   window_s: 1.0          # model her seferinde son 1 sn'yi dinler
   hop_s: 0.5             # ...yarım saniyede bir
   emit_cooldown_s: 3.0   # aynı tip event'i detektör bu sıklıktan fazla basmaz
+  reemit_delta: 0.1      # ...ama skor bu kadar yükselirse bekleme içinde de basar (olayın tepe skoru fusion'a ulaşsın)
   efficientat:
     model_name: mn10_as  # CPU zayıfsa: mn05_as / mn04_as (daha küçük, biraz daha az isabetli)
     sample_rate: 32000
@@ -105,11 +108,15 @@ audio:
     Machine gun: gunshot
     Fusillade: gunshot
     Shatter: glass
+  # Tip bazında model seçimi: silah sesinde YAMNet çok daha iyi (CC0 4 silah kaydı: YAMNet 0.26-0.85,
+  # EfficientAT 0.01-0.10). Diğer tipler ana modelden (backend). YAMNet yoksa ana modele düşer.
+  type_backend:
+    gunshot: yamnet
   # Modele göre event eşiği. efficientat ESC-50 testinde: cam kırılması 0.15-0.19, ilgisiz sesler (alkış, kapı,
-  # bebek ağlaması, metro) <= 0.04. YAMNet cam kırılmasını 0.20 ile "silah" sandı -> gunshot eşiği yüksek.
+  # bebek ağlaması, metro) <= 0.04. YAMNet silah: 4 silah kaydı 0.26-0.85; cam kırılması 0.20, alkış/kapı/metro <= 0.01.
   min_conf:
     efficientat: {scream: 0.15, shout: 0.15, gunshot: 0.15, glass: 0.12}
-    yamnet:      {scream: 0.2, shout: 0.2, gunshot: 0.35, glass: 0.2}
+    yamnet:      {scream: 0.2, shout: 0.2, gunshot: 0.25, glass: 0.2}
   # dB = dBFS + db_offset. Mikrofona göre kalibre edin: sessiz odada ~35-45, normal konuşmada ~55-65 göstermeli.
   db_offset: 100
   db_min_hops: 2         # eşik art arda bu kadar ölçümde aşılırsa (2 x 0.5 sn = 1 sn) "shout" event'i
@@ -125,7 +132,7 @@ audio:
 alerts:
   red:
     weapon_min_conf: 0.6
-    gunshot_min_conf: 0.5
+    gunshot_min_conf: 0.4   # testte silah sesleri 0.41-0.80; cam kırılması YAMNet 0.20
   orange:
     scream_crowd_min_people: 4
     clip_seconds: 10

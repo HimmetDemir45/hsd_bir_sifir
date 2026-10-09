@@ -28,8 +28,14 @@ def test_red_weapon_threshold(cfg):
 
 
 def test_red_gunshot_threshold(cfg):
-    assert classify(ev("gunshot", 0.5, source="audio"), cfg)[0] == "red"
-    assert classify(ev("gunshot", 0.49, source="audio"), cfg) is None
+    thr = cfg["alerts"]["red"]["gunshot_min_conf"]  # eşik config'den; sabit sayı yazma
+    assert classify(ev("gunshot", thr, source="audio"), cfg)[0] == "red"
+    assert classify(ev("gunshot", thr - 0.01, source="audio"), cfg) is None
+
+
+def test_gunshot_040_catches_recorded_041(cfg):
+    # A'nın test kayıtlarında silah sesi 0.41 almıştı ve eski eşikle (0.5) kırmızıya dönmemişti
+    assert classify(ev("gunshot", 0.41, source="audio"), cfg)[0] == "red"
 
 
 def test_scream_depends_on_crowd(cfg):

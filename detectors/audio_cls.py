@@ -148,7 +148,12 @@ class AudioDetector:
         self.class_map: dict[str, str] = self.cfg["class_map"]
         self.backend = self._load_backend(backend or self.cfg["backend"])
         self.sample_rate = self.backend.sample_rate
-        self.min_conf: dict[str, float] = self.cfg["min_conf"][self.backend.name]
+        # Bazı tipler için ikinci model (ör. silah sesinde YAMNet çok daha iyi: test 0.26-0.85, EfficientAT 0.01-0.10)
+        self.aux_backend, self.aux_types = self._load_aux_backend()
+        self.min_conf: dict[str, float] = {
+            t: self.cfg["min_conf"][(self.aux_backend if t in self.aux_types else self.backend).name].get(t, 1.01)
+            for t in EVENT_TYPES
+        }
         self.window = int(self.cfg["window_s"] * self.sample_rate)
         self.hop = int(self.cfg["hop_s"] * self.sample_rate)
 
@@ -161,6 +166,7 @@ class AudioDetector:
         self._loud_hops = 0
         self.db_rule_enabled = True  # run() dosya kaynağında config'e göre kapatır
         self._last_emit: dict[str, float] = {}
+        self._last_conf: dict[str, float] = {}
         self.last_db: float = 0.0
         self.last_scores: dict[str, float] = {t: 0.0 for t in EVENT_TYPES}
 
@@ -174,13 +180,39 @@ class AudioDetector:
                 print(f"[audio] EfficientAT yüklenemedi ({e}) -> YAMNet'e geçiliyor")
         return _YamnetBackend(self.full_cfg, labels, device)
 
+    def _load_aux_backend(self):
+        """config audio.type_backend: {tip: model}. Ana modelden farklı olanlar için ikinci model yüklenir."""
+        wanted = {t for t, name in self.cfg.get("type_backend", {}).items()
+                  if name == "yamnet" and self.backend.name != "yamnet"}
+        if not wanted:
+            return None, set()
+        labels = [lb for lb, t in self.class_map.items() if t in wanted]
+        try:
+            return _YamnetBackend(self.full_cfg, labels, self.full_cfg["general"]["device"]), wanted
+        except Exception as e:  # noqa: BLE001
+            print(f"[audio] UYARI: {sorted(wanted)} için YAMNet yüklenemedi ({e}) -> ana model kullanılıyor. "
+                  f"python -m tools.modelleri_indir")
+            return None, set()
+
+    def _aux_input(self) -> np.ndarray:
+        """Tamponu yardımcı modelin örnekleme hızına çevirir (32k -> 16k: ikili ortalama = basit alçak geçiren)."""
+        sr_from, sr_to = self.sample_rate, self.aux_backend.sample_rate
+        if sr_from == 2 * sr_to and len(self._buf) % 2 == 0:
+            return self._buf.reshape(-1, 2).mean(axis=1).astype(np.float32)
+        from sources.audio import resample
+        return resample(self._buf, sr_from, sr_to)
+
     def current_db_threshold(self, now: float) -> float:
         return float(self.db_threshold["break" if _is_break(now, self.full_cfg) else "lesson"])
 
     def _emit(self, etype: str, conf: float, now: float) -> Event | None:
-        if now - self._last_emit.get(etype, -1e9) < self.cfg["emit_cooldown_s"]:
+        # Bekleme süresi içinde skor belirgin yükselirse yine gönder: ses olayının tepesi genelde eşiği
+        # ilk geçtiği ölçümden sonra geliyor (silah: önce 0.26, sonra 0.50); fusion aynı uyarıda birleştirir.
+        in_cooldown = now - self._last_emit.get(etype, -1e9) < self.cfg["emit_cooldown_s"]
+        if in_cooldown and conf < self._last_conf.get(etype, 0.0) + self.cfg["reemit_delta"]:
             return None
         self._last_emit[etype] = now
+        self._last_conf[etype] = conf
         event = Event(source="audio", type=etype, confidence=round(conf, 3),  # type: ignore[arg-type]
                       camera_id=self.device_id, zone_id=self.zone_id, ts=now)
         if self.out_queue is not None:
@@ -196,7 +228,12 @@ class AudioDetector:
         type_scores = {t: 0.0 for t in EVENT_TYPES}
         for label, score in label_scores.items():
             t = self.class_map[label]
-            type_scores[t] = max(type_scores[t], score)
+            if t not in self.aux_types:
+                type_scores[t] = max(type_scores[t], score)
+        if self.aux_backend is not None:
+            for label, score in self.aux_backend.classify(self._aux_input()).items():
+                t = self.class_map[label]
+                type_scores[t] = max(type_scores[t], score)
         self.last_scores = type_scores
         for t, score in type_scores.items():
             if score >= self.min_conf.get(t, 1.01):
@@ -262,7 +299,8 @@ def main() -> None:
 
     det = AudioDetector(cfg, backend=args.backend)
     src = args.audio if args.audio is not None else cfg["audio"]["input"]
-    print(f"[audio] model={det.backend.name} kaynak={src} bölge={det.zone_id} "
+    aux = f" (+{det.aux_backend.name}: {', '.join(sorted(det.aux_types))})" if det.aux_backend else ""
+    print(f"[audio] model={det.backend.name}{aux} kaynak={src} bölge={det.zone_id} "
           f"dB eşiği={det.current_db_threshold(time.time()):.0f}  (çıkış: Ctrl+C)")
 
     def on_hop(d: AudioDetector, events: list[Event]) -> None:
