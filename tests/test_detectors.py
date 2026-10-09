@@ -174,9 +174,16 @@ def test_fight_strike_rule_catches_punch_model_misses(pose_det, cfg):
 
 
 def test_slow_lying_down_is_not_fall(pose_det):
-    # yatağa uzanma gibi: yerinde (merkez inmeden) yataya geçiş -> ani düşüş yok -> düşme değil
+    # yatağa uzanma gibi: yerinde (merkez inmeden) yataya geçiş -> ani düşüş yok -> düşme değil (şart açıkken)
+    pose_det.cfg["fall"]["require_sudden"] = True
     frames = [[person(300, 300, horizontal=i >= 2)] for i in range(25)]
     assert "fall" not in [typ for _, typ in run_pose(pose_det, frames)]
+
+
+def test_slow_lying_down_is_fall_when_sudden_not_required(pose_det):
+    pose_det.cfg["fall"]["require_sudden"] = False
+    frames = [[person(300, 300, horizontal=i >= 2)] for i in range(25)]
+    assert "fall" in [typ for _, typ in run_pose(pose_det, frames)]
 
 
 def test_head_bow_upper_body_is_not_horizontal(pose_det):

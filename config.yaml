@@ -86,7 +86,10 @@ pose:
     aspect_ratio: 1.2          # omuz+kalça görünmüyor ama bacaklar görünüyorsa: kutu genişlik/yükseklik > bu ise "yatay"
     min_duration_s: 2.0        # 3.0'dı: canli.mp4'te iterek düşürülen kişi yerde 2.4 sn kalıp kalktı; UR Fall'da
                                # yerde kalma 0.4-2.0 sn. Bıçak/koşma/kavga bölümlerinde hiç yatay duruş yok.
-    require_sudden: true       # yataya geçiş ani olmalı (yavaşça uzanma düşme sayılmaz; UR Fall değerlendirmesi)
+    # false: yavaşça yere yatma da düşme (okulda yerde 2 sn+ yatan biri zaten uyarı gerektirir). Canlı denemede
+    # ekip korunmak için yavaş yattı, ani düşüş şartı yüzünden 3 dk'da 0 düşme. canli.mp4/Kavga.mp4: kapalıyken de
+    # 2 doğru düşme, 0 yanlış. true: yavaş uzanma düşme sayılmaz (UR Fall'daki yatağa uzanma klipleri).
+    require_sudden: false
     transition_s: 1.0          # ...yatay olmadan en fazla bu kadar sn önce dik duruyordu
     drop_ratio: 0.15           # ...ve o andan beri kutu merkezi en az bu kadar x boy aşağı indi (UR Fall: aynı yakalamada yanlış alarm %36 -> %14)
     gap_s: 0.5                 # yatay duruş bu kadar kısa kesilirse (duruş titremesi) süre sıfırlanmaz
