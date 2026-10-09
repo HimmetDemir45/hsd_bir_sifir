@@ -59,10 +59,19 @@ class FaceBlurrer:
             self._yunet = cv2.FaceDetectorYN.create(str(model), "", (320, 320),
                                                     score_threshold=self.cfg["face_conf"])
             self.detector_name = "yunet"
-        else:
-            self._haar = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+            return
+        print(f"[privacy] UYARI: {model} yok -> yüz dedektörü zayıf yedeğe düşüyor. İndirmek için: "
+              f"python -m tools.modelleri_indir")
+        # Haar yedeği: OpenCV 5.0 pip paketinde cascade dosyaları yok -> empty() kontrolü şart
+        haar_dir = getattr(getattr(cv2, "data", None), "haarcascades", "")
+        haar = cv2.CascadeClassifier(haar_dir + "haarcascade_frontalface_default.xml") if haar_dir else None
+        if haar is not None and not haar.empty():
+            self._haar = haar
             self.detector_name = "haar"
-            print(f"[privacy] {model.name} yok -> Haar yüz dedektörü (daha zayıf). Poz kafa bölgeleri yine kullanılıyor.")
+        else:
+            self.detector_name = "yok (sadece poz)"
+            print("[privacy] UYARI: Haar cascade da bulunamadı -> sadece poz kafa bölgeleri bulanıklaştırılıyor. "
+                  "Yüz kaçırma riski yüksek; YuNet modelini indirin.")
 
     # ---------- kafa / yüz kutuları ----------
     def head_boxes(self, person: Any) -> list[Box]:
@@ -138,7 +147,7 @@ class FaceBlurrer:
             if faces is not None:
                 for fx, fy, fw, fh in faces[:, :4]:
                     boxes.append((fx / scale, fy / scale, (fx + fw) / scale, (fy + fh) / scale))
-        else:
+        elif self._haar is not None:
             gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
             for fx, fy, fw, fh in self._haar.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4):
                 boxes.append((fx / scale, fy / scale, (fx + fw) / scale, (fy + fh) / scale))

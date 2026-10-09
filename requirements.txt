@@ -1,6 +1,9 @@
 # Görüntü + modeller (YOLO11 nano, poz). torch'u ultralytics kendisi çeker (CPU sürümü).
 ultralytics>=8.3,<9
-opencv-python>=4.9
+# OpenCV 4.x'e sabit: 5.0 pip paketinde Haar cascade dosyaları yok ve davranış farkları var.
+# mediapipe opencv-contrib-python'u da kuruyor; ikisi aynı cv2'yi paylaştığı için AYNI sürüm olmalı.
+opencv-python==4.14.0.94
+opencv-contrib-python==4.14.0.94
 numpy>=1.26,<3
 
 # Ayar ve gizli bilgiler

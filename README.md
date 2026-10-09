@@ -9,11 +9,17 @@ py -3.11 -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 copy .env.example .env
+python -m tools.modelleri_indir
 ```
 
-Model dosyaları `models/` klasörüne konur (git'e eklenmez):
-- `models/weapon.pt`: Roboflow Universe weapon modeli. Yoksa sistem otomatik olarak `yolo11n.pt` ile sadece bıçak tespitine düşer.
-- `models/yolo11n.pt`, `models/yolo11n-pose.pt`: ilk çalıştırmada otomatik iner (internet gerekir; demodan önce bir kez çalıştırın).
+**Son komut zorunlu:** tüm modelleri `models/` altına indirir (git'e eklenmez, internet gerekir). Demo internetsiz
+çalışacağı için sunumdan önce mutlaka çalıştırın; sonunda "tüm modeller hazır" yazmalı. İndirilenler:
+- `face_detection_yunet_2023mar.onnx`: yüz bulanıklaştırma (YuNet). **Yoksa bulanıklaştırma zayıf yedeğe düşer**, açılışta uyarı basılır.
+- `yolo11n.pt`, `yolo11n-pose.pt`: bıçak ve poz. `mn10_as_mAP_471.pt`: ses (EfficientAT). `yamnet.tflite`: ses yedeği.
+- `weapon.pt` (Roboflow Universe silah modeli) elle eklenir; yoksa sistem `yolo11n.pt` ile sadece bıçak tespitine düşer.
+
+OpenCV `4.14`'e sabittir: 5.0 pip paketinde Haar cascade dosyaları yok. Eski kurulumu güncellemek için tekrar
+`pip install -r requirements.txt` çalıştırın (`opencv-python` ve `opencv-contrib-python` aynı sürümde olmalı).
 
 ## Detektörleri tek başına çalıştırma
 
@@ -27,10 +33,11 @@ python -m detectors.audio_cls --list-devices            # mikrofon numaraları (
 ```
 
 Ses modeli: [EfficientAT](https://github.com/fschmid56/EfficientAT) `mn10_as` (MIT, `detectors/third_party/efficientat/`),
-yedek olarak MediaPipe + YAMNet (`models/yamnet.tflite`). Ağırlıklar ilk çalıştırmada `models/` altına iner;
-YAMNet'i elle indirin:
+yedek olarak MediaPipe + YAMNet (`models/yamnet.tflite`, `tools.modelleri_indir` indirir).
+
 ```bash
-curl -L -o models/yamnet.tflite https://storage.googleapis.com/mediapipe-models/audio_classifier/yamnet/float32/1/yamnet.tflite
+python -m privacy.blur                                  # webcam: yüz bulanıklaştırmayı dene
+python -m privacy.blur --source test_media/Kavga.mp4
 ```
 
 Çıkmak için pencerede `q`. Tespit edilen olaylar konsola JSON olarak basılır.
@@ -66,7 +73,8 @@ python main.py --fresh --audio                                       # mikrofon
 Kapalıyken veya internet yokken mesajlar sadece konsola yazılır; sistem çalışmaya devam eder.
 
 **Sunum öncesi kontrol listesi**
-- [ ] Modeller inmiş (`models/yolo11n.pt`, `yolo11n-pose.pt`; ilk çalıştırma internet ister)
+- [ ] `python -m tools.modelleri_indir` "tüm modeller hazır" diyor (internet varken)
+- [ ] `main.py` açılışında `[privacy] UYARI` satırı YOK (varsa YuNet inmemiş, yüzler kaçabilir)
 - [ ] `python -m pytest tests -q` hepsi geçiyor
 - [ ] `python main.py --demo --fresh` ile kırmızıya kadar gidip Onayla denendi
 - [ ] Alarm sesi butonu tıklandı, hoparlör açık

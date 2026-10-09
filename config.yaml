@@ -7,6 +7,8 @@ general:
   target_fps: 8          # işleme hızı üst sınırı
   snapshot_dir: snapshots
   clip_dir: clips
+  clip_pre_ratio: 0.5    # klibin ne kadarı uyarıdan ÖNCE (0.5 -> 10 sn klipte 5 sn önce + 5 sn sonra)
+  clip_max_side: 960     # klip kareleri bu boyuta küçültülür (bellek: JPEG tampon ~20 MB)
 
 # Kameralar ve bulundukları bölge
 cameras:
