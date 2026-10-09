@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+
+# Gizli bilgiler
+.env
+
+# Model ağırlıkları (büyük dosyalar, git'e eklenmez)
+models/*
+!models/.gitkeep
+*.pt
+*.tflite
+
+# Çalışma zamanı çıktıları
+storage/*.db
+snapshots/*
+!snapshots/.gitkeep
+clips/
+
+# Demo medyası büyükse ekleme
+test_media/*
+!test_media/.gitkeep

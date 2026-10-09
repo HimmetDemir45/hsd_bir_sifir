@@ -1,0 +1,134 @@
+# OkulKalkan ayarları. Tüm eşikler burada; kodda sabit eşik yok.
+# ${DEGISKEN} biçimindeki değerler .env'den okunur.
+
+general:
+  device: cpu            # cpu | cuda
+  imgsz: 640             # 480–640 arası; CPU yavaşsa 480 yapın
+  target_fps: 8          # işleme hızı üst sınırı
+  snapshot_dir: snapshots
+  clip_dir: clips
+
+# Kameralar ve bulundukları bölge
+cameras:
+  - id: cam1
+    source: 0            # 0 = webcam, "rtsp://..." veya "test_media/kavga.mp4"
+    zone_id: kantin
+
+# Bölgeler: tip (eşikler tipe göre değişir) + kat planı poligonu (floorplan.png piksel koordinatları)
+zones:
+  kantin:     {name: Kantin,       type: social,  polygon: [[50, 50], [300, 50], [300, 200], [50, 200]]}
+  koridor_1:  {name: 1. Kat Koridor, type: corridor, polygon: [[320, 50], [700, 50], [700, 120], [320, 120]]}
+  spor_salonu: {name: Spor Salonu,  type: gym,     polygon: [[50, 220], [400, 220], [400, 450], [50, 450]]}
+  bahce:      {name: Bahçe,        type: outdoor, polygon: [[420, 220], [700, 220], [700, 450], [420, 450]]}
+
+# Ders / teneffüs çizelgesi (HH:MM). Bu aralıklar dışındaki zaman "ders" sayılır.
+schedule:
+  breaks:
+    - ["10:10", "10:20"]
+    - ["11:00", "11:10"]
+    - ["12:30", "13:20"]   # öğle arası
+    - ["14:00", "14:10"]
+
+# ---------------- Detektörler ----------------
+weapon:
+  model: models/weapon.pt        # Roboflow weapon modeli
+  fallback_model: models/yolo11n.pt  # weapon.pt yoksa: COCO, sadece knife sınıfı (ilk çalıştırmada otomatik iner)
+  fallback_classes: {knife: knife}
+  # Weapon modelindeki sınıf adı (küçük harf) -> event tipi. Listede olmayan sınıflar yok sayılır.
+  class_map:
+    gun: gun
+    pistol: gun
+    handgun: gun
+    rifle: gun
+    weapon: gun
+    firearm: gun
+    knife: knife
+  min_conf: 0.6          # KIRMIZI için güven eşiği
+  display_conf: 0.35     # bu ve üstü ekranda (gri) gösterilir; event üretmez
+  window: 5              # son N kare
+  min_hits: 3            # ...en az bu kadarında tespit
+  emit_cooldown_s: 2.0   # aynı tip event'i detektör bu sıklıktan fazla basmaz (asıl dedup fusion'da)
+  every_n_frames: 1      # silah tespiti her karede
+
+pose:
+  model: models/yolo11n-pose.pt
+  every_n_frames: 2
+  person_conf: 0.5             # kişi kutusu güven eşiği
+  kp_conf: 0.4                 # keypoint bu güvenin altındaysa yok sayılır
+  track_max_dist: 0.8          # kareler arası eşleştirme: merkez kayması < kişi boyu * oran
+  track_ttl_s: 1.0             # bu süre görünmeyen kişi takipten düşer
+  speed_ema: 0.5               # hız yumuşatma (0 = yumuşatma yok, 1'e yakın = çok yumuşak)
+  emit_cooldown_s: 3.0         # aynı tip event'i detektör bu sıklıktan fazla basmaz
+  fight:
+    proximity_ratio: 0.6       # merkezler arası mesafe < kişi boyu * oran
+    limb_speed: 1.5            # bilek/dirsek hızı (kişi boyu / sn)
+    hold_s: 0.5                # hızlı hareket bu kadar süre "devam ediyor" sayılır (vuruşlar arası boşluk)
+    min_duration_s: 1.0
+  fall:
+    torso_angle_deg: 60        # gövdenin dikeyle açısı bundan büyükse "yatay"
+    aspect_ratio: 1.2          # keypoint yoksa: kutu genişlik/yükseklik bundan büyükse "yatay"
+    min_duration_s: 3.0
+  running:
+    mean_speed: 1.2            # ortalama keypoint hızı (kişi boyu / sn)
+    min_people: 2
+    min_duration_s: 0.5
+  crowd:
+    min_people: 4
+    radius_ratio: 1.5          # kişi boyu cinsinden kümelenme yarıçapı
+
+audio:
+  model: models/yamnet.tflite
+  sample_rate: 16000
+  window_s: 0.975
+  # YAMNet sınıf adı -> event tipi
+  class_map:
+    Screaming: scream
+    Shout: shout
+    Yell: shout
+    Gunshot, gunfire: gunshot
+    Glass: glass
+    Shatter: glass
+  min_conf: 0.3
+  # dB eşikleri: bölge tipine ve zamana göre (break = teneffüs, lesson = ders)
+  db_thresholds:
+    default: {lesson: 70, break: 85}
+    gym:     {lesson: 85, break: 95}
+    outdoor: {lesson: 80, break: 95}
+    social:  {lesson: 75, break: 90}
+
+# ---------------- Uyarı kuralları ----------------
+alerts:
+  red:
+    weapon_min_conf: 0.6
+    gunshot_min_conf: 0.5
+  orange:
+    scream_crowd_min_people: 4
+    clip_seconds: 10
+  yellow:
+    shout_min_conf: 0.3
+  escalation:
+    yellow_count: 3            # aynı bölgede bu kadar sarı...
+    window_s: 120              # ...bu süre içinde -> turuncu
+  dedup_window_s: 30           # aynı bölge + aynı tip bu süre içinde tek uyarı
+  auto_escalate_red:
+    enabled: false             # İLKE: polis bildirimi otomatik değil. Varsayılan KAPALI.
+    timeout_s: 120
+
+# Kime bildirim gider (rol bazlı)
+recipients:
+  yellow: [nobetci]
+  orange: [nobetci, mudur_yrd, rehber]
+  red: [nobetci, mudur_yrd, rehber, mudur]
+
+privacy:
+  blur_faces: true
+  record_clips_for: [orange, red]
+
+api:
+  host: 0.0.0.0
+  port: 8000
+
+telegram:
+  enabled: false
+  bot_token: ${TELEGRAM_BOT_TOKEN}
+  chat_id: ${TELEGRAM_CHAT_ID}
