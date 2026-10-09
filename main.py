@@ -59,6 +59,7 @@ def camera_loop(cfg: dict, cam_cfg: dict, source: str, events: "queue.Queue[Even
     camera = Camera(source, loop_file=True)
     min_dt = 1.0 / cfg["general"]["target_fps"]
     n_frames, fps_t0 = 0, time.time()
+    last_blur_err = 0.0
     try:
         while not stop.is_set():
             t0 = time.time()
@@ -72,8 +73,16 @@ def camera_loop(cfg: dict, cam_cfg: dict, source: str, events: "queue.Queue[Even
             weapon.draw(frame, w_dets)
             pose.draw(frame, tracks)
             if blur_faces is not None:
-                # pose.privacy_persons: düşük güvenli kişiler dahil (kalabalıkta yarım görünen yüzler)
-                frame = blur_faces(frame, pose.privacy_persons)  # yayın ve snapshot'tan ÖNCE (gizlilik ilkesi)
+                try:
+                    # pose.privacy_persons: düşük güvenli kişiler dahil (kalabalıkta yarım görünen yüzler)
+                    frame = blur_faces(frame, pose.privacy_persons)  # yayın ve snapshot'tan ÖNCE (gizlilik ilkesi)
+                except Exception as e:
+                    # FAIL-CLOSED: bulanıklaştırılamayan kare ASLA yayına/snapshot'a/klibe girmez
+                    if t0 - last_blur_err > 10.0:
+                        print(f"[privacy] bulanıklaştırma HATA, kare atlanıyor (yayın durur): {e!r}", flush=True)
+                        last_blur_err = t0
+                    time.sleep(0.05)
+                    continue
             if clip_buf is not None:
                 clip_buf.add(frame, camera.last_ts)  # sadece bulanık kareler
             ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])

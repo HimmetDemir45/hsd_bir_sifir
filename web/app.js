@@ -12,6 +12,10 @@ let zones = {};
 
 function zoneName(id) { return (zones[id] && zones[id].name) || id; }
 
+function clipUrl(a) {
+  return a.clip ? "/clips/" + encodeURIComponent(a.clip.split(/[\\/]/).pop()) : null;
+}
+
 function fmtTime(ts) {
   return new Date(ts * 1000).toLocaleTimeString("tr-TR");
 }
@@ -43,7 +47,18 @@ function render(freshId) {
     status.className = "status";
     status.textContent = STATUS_TR[a.status] || a.status;
 
-    li.append(top, reasons, status);
+    li.append(top, reasons);
+    const url = clipUrl(a);
+    if (url) {   // klip turuncu/kırmızıda, kaydedilince (birkaç sn sonra) gelir
+      const link = document.createElement("a");
+      link.className = "clip-link";
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = "▶ Klibi izle";
+      li.append(link);
+    }
+    li.append(status);
     return li;
   }));
 }
@@ -160,6 +175,13 @@ function setAlarm(play) {
   else { alarm.pause(); alarm.currentTime = 0; }
 }
 
+function setModalClip(a) {
+  const link = document.getElementById("redClip");
+  const url = clipUrl(a);
+  link.hidden = !url;
+  if (url) link.href = url;
+}
+
 function showModalFor(a) {
   document.getElementById("redZone").textContent = zoneName(a.zone_id);
   const snap = document.getElementById("redSnap");
@@ -170,6 +192,7 @@ function showModalFor(a) {
     li.textContent = r;
     return li;
   }));
+  setModalClip(a);
   document.getElementById("redActions").hidden = false;
   document.getElementById("redResult").hidden = true;
   document.getElementById("confirmBtn").disabled = false;
@@ -188,7 +211,8 @@ function updateModal() {
   if (modal.hidden || modal.dataset.id !== current.id) {
     modal.dataset.id = current.id;
     showModalFor(current);
-  } else {   // aynı uyarı güncellendi (yeni sebep eklendi)
+  } else {   // aynı uyarı güncellendi (yeni sebep eklendi / klip hazır oldu)
+    setModalClip(current);
     document.getElementById("redReasons").replaceChildren(...current.reasons.map((r) => {
       const li = document.createElement("li");
       li.textContent = r;

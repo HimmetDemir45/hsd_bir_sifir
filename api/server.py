@@ -128,6 +128,14 @@ def create_app(cfg: dict[str, Any], storage: Storage, frames: FrameStore, hub: H
             raise HTTPException(404)
         return FileResponse(path)
 
+    @app.get("/clips/{name}")
+    def clip(name: str) -> FileResponse:
+        # Sadece dosya adı: yol gezintisi (../) engellenir. Uzantı mp4 veya webm olabilir (ClipBuffer.save).
+        path = resolve_path(cfg["general"]["clip_dir"]) / Path(name).name
+        if not path.is_file():
+            raise HTTPException(404)
+        return FileResponse(path)
+
     @app.websocket("/ws")
     async def ws(socket: WebSocket) -> None:
         await socket.accept()

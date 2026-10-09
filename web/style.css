@@ -13,7 +13,7 @@ h2 { margin: 0 0 10px; font-size: 15px; color: var(--muted); font-weight: 600; }
 main { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; padding: 16px 20px; }
 @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
 section { background: var(--panel); border-radius: 8px; padding: 14px; }
-#cam { width: 100%; border-radius: 6px; background: #000; display: block; }
+#cam { max-width: 100%; max-height: 65vh; margin: 0 auto; object-fit: contain; border-radius: 6px; background: #000; display: block; }
 #alerts { list-style: none; margin: 0; padding: 0; max-height: 75vh; overflow-y: auto; }
 .alert { border-left: 6px solid var(--muted); background: #232938; border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; }
 .alert.yellow { border-color: var(--yellow); } .alert.orange { border-color: var(--orange); } .alert.red { border-color: var(--red); }
@@ -47,5 +47,7 @@ main.lower { padding-top: 0; }
 .btn:disabled { opacity: .5; cursor: wait; }
 .modal-result { font-size: 18px; }
 .modal-result p { margin: 8px 0; }
+.clip-link { display: inline-block; margin: 4px 0; color: #7db8ff; font-size: 14px; text-decoration: underline; }
+.alert .clip-link { font-size: 13px; }
 .alert.fresh { animation: flash 1.2s ease-out; }
 @keyframes flash { from { background: #3a4258; } to { background: #232938; } }
