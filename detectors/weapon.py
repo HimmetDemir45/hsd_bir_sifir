@@ -127,7 +127,7 @@ class WeaponDetector:
                     camera_id=self.camera_id,
                     zone_id=self.zone_id,
                     ts=now,
-                    snapshot=None,  # M3: yüzü bulanıklaştırılmış snapshot (privacy/blur.py) eklenecek
+                    snapshot=None,  # snapshot uyarı seviyesinde main.py alır (bulanık yayın karesinden)
                 )
                 events.append(event)
                 if self.out_queue is not None:

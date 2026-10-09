@@ -3,6 +3,7 @@
 Kapsam: poz kuralları (kavga/düşme/koşuşma), silah 3/5 kare kuralı, ses event'i gönderme/bekleme/yardımcı model,
 dB kuralı, yüz kutusu boyutu ve zamansal hafıza, klip penceresi.
 """
+import time
 from datetime import datetime
 
 import numpy as np
@@ -71,7 +72,7 @@ def run_pose(det, frames, dt=0.2):
 def test_config_keeps_detector_settings(cfg):
     """Birleştirmede config.yaml'ın eski sürümü alınırsa bu ayarlar sessizce kaybolabiliyor (2026-10-09'da oldu)."""
     g, a, p = cfg["general"], cfg["audio"], cfg["privacy"]
-    for key in ("torch_threads", "max_frame_side", "clip_pre_ratio", "clip_max_side"):
+    for key in ("torch_threads", "max_frame_side", "clip_pre_ratio", "clip_max_side", "reconnect_s"):
         assert key in g, f"general.{key} eksik"
     for key in ("reemit_delta", "type_backend", "db_rule_on_files", "emit_cooldown_s"):
         assert key in a, f"audio.{key} eksik"
@@ -225,6 +226,47 @@ def test_blur_changes_only_face_and_persists(cfg):
     assert not np.array_equal(later[85:110, 92:108], frame[85:110, 92:108])
     much_later = blur.blur(frame.copy(), [], now=0.2 + cfg["privacy"]["persist_s"] + 0.5)
     assert np.array_equal(much_later, frame)
+
+
+# ---------------- kamera ----------------
+class FakeCapture:
+    """cv2.VideoCapture yerine: ilk açılış N kare verip kopar; yeniden açılınca tekrar kare verir."""
+    opened = 0
+
+    def __init__(self, *args, **kwargs):
+        FakeCapture.opened += 1
+        self.left = 3 if FakeCapture.opened == 1 else 10 ** 6
+
+    def isOpened(self):
+        return True
+
+    def read(self):
+        if self.left <= 0:
+            return False, None
+        self.left -= 1
+        time.sleep(0.01)
+        return True, np.full((4, 4, 3), FakeCapture.opened, np.uint8)
+
+    def release(self):
+        pass
+
+
+def test_camera_reconnects_after_drop(monkeypatch):
+    import sources.camera as cam_mod
+    FakeCapture.opened = 0
+    monkeypatch.setattr(cam_mod.cv2, "VideoCapture", FakeCapture)
+    cam = cam_mod.Camera(0, reconnect_s=0.2)
+    try:
+        deadline = time.time() + 5
+        frame = None
+        while time.time() < deadline:
+            frame = cam.read(timeout=0.5)
+            if frame is not None and frame[0, 0, 0] == 2:   # 2. açılıştan gelen kare
+                break
+        assert FakeCapture.opened >= 2, "kopan kamera yeniden açılmalı"
+        assert frame is not None and frame[0, 0, 0] == 2, "yeniden açıldıktan sonra kare gelmeli"
+    finally:
+        cam.release()
 
 
 # ---------------- klip ----------------

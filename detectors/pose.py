@@ -216,7 +216,7 @@ class PoseDetector:
             camera_id=self.camera_id,
             zone_id=self.zone_id,
             ts=now,
-            snapshot=None,  # M3: yüzü bulanıklaştırılmış snapshot (privacy/blur.py) eklenecek
+            snapshot=None,  # snapshot uyarı seviyesinde main.py alır (bulanık yayın karesinden)
         )
         if self.out_queue is not None:
             self.out_queue.put(event)
