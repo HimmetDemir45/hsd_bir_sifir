@@ -52,6 +52,86 @@ function upsert(alert, fresh) {
   alerts.set(alert.id, alert);
   render(fresh ? alert.id : null);
   updateModal();
+  scheduleStats();
+}
+
+// ---------- Kat planı ısı haritası + haftalık özet ----------
+const planCanvas = document.getElementById("plan");
+const planCtx = planCanvas.getContext("2d");
+const floorplan = new Image();
+let floorplanReady = false;
+floorplan.onload = () => { floorplanReady = true; refreshStats(); };
+floorplan.src = "/floorplan.png";
+let statsTimer = null;
+
+function scheduleStats() {   // uyarı yağmurunda her seferinde değil, en fazla ~1 sn'de bir
+  if (statsTimer) return;
+  statsTimer = setTimeout(() => { statsTimer = null; refreshStats(); }, 1000);
+}
+
+function drawHeatmap(counts) {
+  planCtx.clearRect(0, 0, planCanvas.width, planCanvas.height);
+  if (floorplanReady) planCtx.drawImage(floorplan, 0, 0, planCanvas.width, planCanvas.height);
+  const max = Math.max(1, ...Object.values(counts));
+  for (const [id, z] of Object.entries(zones)) {
+    const n = counts[id] || 0;
+    const t = n / max;                       // 0..1 yoğunluk
+    planCtx.beginPath();
+    z.polygon.forEach(([x, y], i) => (i ? planCtx.lineTo(x, y) : planCtx.moveTo(x, y)));
+    planCtx.closePath();
+    if (n > 0) {
+      // sarıdan kırmızıya: yoğunluk arttıkça hem renk hem opaklık artar
+      const hue = 55 - 55 * t;
+      planCtx.fillStyle = "hsla(" + hue + ", 95%, 50%, " + (0.25 + 0.55 * t) + ")";
+      planCtx.fill();
+    }
+    planCtx.lineWidth = 2;
+    planCtx.strokeStyle = "#555";
+    planCtx.stroke();
+    const xs = z.polygon.map((p) => p[0]), ys = z.polygon.map((p) => p[1]);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+    planCtx.fillStyle = "#222";
+    planCtx.textAlign = "center";
+    planCtx.font = "bold 15px system-ui, sans-serif";
+    planCtx.fillText(z.name, cx, cy - 4);
+    planCtx.font = "13px system-ui, sans-serif";
+    planCtx.fillText(n + " olay", cx, cy + 14);
+  }
+}
+
+function renderWeekly(summary) {
+  const body = document.querySelector("#weekly tbody");
+  const rows = Object.entries(summary);
+  if (rows.length === 0) {
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 4; td.className = "empty"; td.textContent = "Henüz uyarı yok";
+    tr.append(td);
+    body.replaceChildren(tr);
+    return;
+  }
+  body.replaceChildren(...rows.map(([zone, c]) => {
+    const tr = document.createElement("tr");
+    for (const text of [zoneName(zone), c.yellow, c.orange, c.red]) {
+      const td = document.createElement("td");
+      td.textContent = String(text);
+      tr.append(td);
+    }
+    return tr;
+  }));
+}
+
+async function refreshStats() {
+  try {
+    const [counts, summary] = await Promise.all([
+      fetch("/api/heatmap").then((r) => r.json()),
+      fetch("/api/summary/weekly").then((r) => r.json()),
+    ]);
+    drawHeatmap(counts);
+    renderWeekly(summary);
+  } catch (e) {
+    console.error("istatistikler yüklenemedi", e);
+  }
 }
 
 // ---------- Kırmızı uyarı modalı + sesli alarm ----------
@@ -158,6 +238,7 @@ async function loadInitial() {
     for (const a of list) alerts.set(a.id, a);
     render(null);
     updateModal();
+    refreshStats();
   } catch (e) {
     console.error("ilk yükleme başarısız", e);
   }

@@ -22,6 +22,19 @@
       <ul id="alerts"></ul>
     </section>
   </main>
+  <main class="lower">
+    <section>
+      <h2>Kat planı: olay yoğunluğu</h2>
+      <canvas id="plan" width="760" height="500"></canvas>
+    </section>
+    <section>
+      <h2>Haftalık özet (son 7 gün)</h2>
+      <table id="weekly">
+        <thead><tr><th>Bölge</th><th class="y">Sarı</th><th class="o">Turuncu</th><th class="r">Kırmızı</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
 
   <!-- Kırmızı uyarı: tam ekran modal (insan onayı gerekir; 112 araması SİMÜLASYONDUR) -->
   <div id="redModal" class="modal" hidden>

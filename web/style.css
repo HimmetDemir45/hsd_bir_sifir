@@ -22,6 +22,13 @@ section { background: var(--panel); border-radius: 8px; padding: 14px; }
 .alert.yellow .lvl { color: var(--yellow); } .alert.orange .lvl { color: var(--orange); } .alert.red .lvl { color: var(--red); }
 .alert ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; }
 .alert .status { font-size: 12px; margin-top: 4px; color: var(--muted); }
+main.lower { padding-top: 0; }
+#plan { width: 100%; height: auto; border-radius: 6px; background: #f5f3ee; display: block; }
+#weekly { width: 100%; border-collapse: collapse; font-size: 14px; }
+#weekly th, #weekly td { padding: 8px 6px; text-align: center; border-bottom: 1px solid #2c3345; }
+#weekly th:first-child, #weekly td:first-child { text-align: left; }
+#weekly .y { color: var(--yellow); } #weekly .o { color: var(--orange); } #weekly .r { color: var(--red); }
+#weekly td.empty { color: var(--muted); text-align: left; }
 .sound { margin-left: auto; font: inherit; font-size: 12px; padding: 5px 12px; border-radius: 6px; border: 0; cursor: pointer; color: var(--text); }
 .sound.off { background: #6b2226; } .sound.on { background: #1f6f43; }
 .modal { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center;
