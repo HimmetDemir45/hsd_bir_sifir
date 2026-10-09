@@ -126,7 +126,7 @@ audio:
 alerts:
   red:
     weapon_min_conf: 0.6
-    gunshot_min_conf: 0.5
+    gunshot_min_conf: 0.4      # test kayıtlarında silah sesi 0.41-0.80 aldı; cam kırılması 0.20 (silah sanılmaz)
   orange:
     scream_crowd_min_people: 4
     clip_seconds: 10
