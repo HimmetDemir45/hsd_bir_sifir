@@ -47,17 +47,15 @@ weapon:
   # Birden fazla model birlikte çalışır; dosyası olmayan model uyarıyla atlanır.
   # class_map: modelin sınıf adı (küçük harf) -> event tipi; listede olmayan sınıflar yok sayılır.
   models:
-    # Tabanca: JoaoAssalim/Weapons-and-Knives-Detector-with-YOLOv8 (MIT, YOLOv8n), tools.modelleri_indir indirir.
-    # Bıçak sınıfı bu modelde zayıf (fotoğraf testi 1/7) -> bıçak COCO'dan.
-    - path: models/weapon_guns.pt
-      class_map: {guns: gun}
-    # Bıçak: COCO yolo11n (ilk çalıştırmada otomatik iner)
-    - path: models/yolo11n.pt
-      class_map: {knife: knife}
-  # Tip başına KIRMIZI güven eşiği. Tabanca 0.8: güvenlik kamerası görüntüsünde koyu nesneleri silah sanıyor
-  # (3/5 kare kuralıyla yanlış kırmızı: 0.6 -> %17, 0.7 -> %9, 0.8 -> %3 normal klip; Kavga.mp4'te sopa 0.7'de
-  # silah sanıldı). Tabanca fotoğrafı yakalama: 0.6 -> 9/11, 0.8 -> 4/11.
-  min_conf: {gun: 0.8, knife: 0.6}
+    # Tabanca/tüfek: KENDİ EĞİTTİĞİMİZ YOLO11n (Dangerous Items, Zenodo CC BY 4.0, 5934 görüntü, GPU 40 tur).
+    # Ayrılmış test seti: tabanca P 0.91 R 0.81 mAP50 0.89, tüfek mAP50 0.93 (genel 0.87). docs/DEGERLENDIRME.md
+    # Tek model hem tabanca hem bıçak: COCO'nun bıçak sınıfı bu veri setinin testinde %5 yakalıyordu (bizimki %59-69).
+    - path: ml/silah_v1.pt         # repoda (5 MB): ekip ek kurulum yapmadan kullanır
+      class_map: {gun: gun, rifle: gun, knife: knife, machete: knife}
+  # Tip başına KIRMIZI güven eşiği. Ölçüm: veri seti TEST bölümü (yakalama) + 150 silahsız güvenlik kamerası klibi
+  # (yanlış kırmızı, 3/5 kare kuralı). Tabanca 0.65 -> ~%67 / %4 (0.6: %74/%6, 0.7: %60/%2).
+  # Bıçak 0.7 -> %59 / %1.3 (0.65: %2).
+  min_conf: {gun: 0.65, knife: 0.7}
   display_conf: 0.35     # bu ve üstü ekranda (gri) gösterilir; event üretmez
   window: 5              # son N kare
   min_hits: 3            # ...en az bu kadarında tespit
@@ -98,6 +96,14 @@ pose:
     mean_speed: 2.0            # ortalama keypoint hızı (kişi boyu / sn)
     min_people: 1
     min_duration_s: 0.3
+  # Öğrenilmiş kavga modeli (tools/kavga_egit.py; veri setleri: Surveillance Fight, RLVS, Movies Fights).
+  # Açıkken kavga kararını kural yerine model verir; dosya yoksa kural (fight:) kullanılır.
+  fight_model:
+    enabled: true
+    path: ml/kavga_model.joblib
+    threshold: null            # null: eğitimde CV ile seçilen eşik (model dosyasında)
+    eval_every_s: 0.5          # olasılık bu sıklıkta hesaplanır (pencere: modelin window_s'i)
+    min_consecutive: 1         # 1: eğitimdeki ölçümle aynı (klip kararı = en yüksek pencere); 2 raporlanandan az yakalıyordu
   crowd:
     min_people: 4
     radius_ratio: 1.5          # kişi boyu cinsinden kümelenme yarıçapı

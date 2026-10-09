@@ -104,6 +104,7 @@ class PoseDetector:
         model_path = resolve_path(self.cfg["model"])
         model_path.parent.mkdir(parents=True, exist_ok=True)
         self.model = YOLO(str(model_path))  # yoksa models/ altına otomatik iner
+        self.fight_model, self.fight_meta = self._load_fight_model()
 
         # Yüz bulanıklaştırma için düşük güvenli kişiler de (kısmen kapanmış, kalabalıkta) lazım
         self.privacy_conf: float = cfg.get("privacy", {}).get("person_conf", self.cfg["person_conf"])
@@ -122,6 +123,51 @@ class PoseDetector:
         self._upright: deque[tuple[float, float, float, float]] = deque(maxlen=256)
         self._last_emit: dict[str, float] = {}
         self.status = PoseStatus()
+        # öğrenilmiş kavga modeli durumu: son pencerenin iskelet kareleri, son olasılık, art arda eşik üstü sayısı
+        self._fight_buf: deque = deque()
+        self._fight_eval_last = -1e9
+        self._fight_hits = 0
+        self.fight_prob = 0.0
+
+    def _load_fight_model(self):
+        """config pose.fight_model: veri setleriyle eğitilmiş kavga sınıflandırıcısı (tools/kavga_egit.py).
+        Dosya yoksa / kapalıysa None -> elle yazılmış kural (yakınlık + kol hızı) kullanılır."""
+        fm = self.cfg.get("fight_model", {})
+        path = resolve_path(fm.get("path", "models/kavga_model.joblib"))
+        if not fm.get("enabled", False):
+            return None, None
+        if not path.is_file():
+            print(f"[pose] UYARI: {path.name} yok -> kavga için kural kullanılıyor")
+            return None, None
+        import joblib   # scikit-learn ile gelir; sadece model açıkken gerekir
+
+        bundle = joblib.load(path)
+        meta = bundle["meta"]
+        print(f"[pose] kavga modeli: {meta['model']} (CV AUC {meta['cv'].get('auc')}, {meta['n_clips']} klip, "
+              f"eşik {fm.get('threshold') or meta['threshold']})")
+        return bundle["model"], meta
+
+    def _fight_by_model(self, tracks: list[Track], now: float) -> tuple[set[int], float]:
+        """Son window_s saniyenin iskeletlerinden kavga olasılığı (eğitimle AYNI özellik kodu: ml.pose_features).
+        Olasılık art arda min_consecutive değerlendirmede eşiği geçerse kavga."""
+        from ml.pose_features import window_features
+
+        fm, meta = self.cfg["fight_model"], self.fight_meta
+        self._fight_buf.append((now, [(t.id, t.person.kps, t.person.kpc, t.person.box)
+                                      for t in tracks if abs(t.last_ts - now) < 1e-9]))
+        while self._fight_buf and self._fight_buf[0][0] < now - meta["window_s"]:
+            self._fight_buf.popleft()
+        if now - self._fight_eval_last >= fm["eval_every_s"] and len(self._fight_buf) >= 3:
+            self._fight_eval_last = now
+            feats = window_features(list(self._fight_buf))[None, :]
+            self.fight_prob = float(self.fight_model.predict_proba(feats)[0, 1])
+            thr = fm.get("threshold") or meta["threshold"]
+            self._fight_hits = self._fight_hits + 1 if self.fight_prob >= thr else 0
+        if self._fight_hits >= fm["min_consecutive"]:
+            # karar pencerenin tamamına dayanır: bu karede iskelet kaybolmuş olsa bile kavga bildirilir
+            # (eskiden kimlik listesi boşsa event basılmıyordu; demo klibinde p=0.96 iken kaçtı)
+            return {t.id for t in tracks} or {-1}, self.fight_prob
+        return set(), self.fight_prob
 
     # ---------- algılama ----------
     def detect(self, frame: np.ndarray) -> list[Person]:
@@ -250,12 +296,20 @@ class PoseDetector:
             if tr.limb_speed >= c["fight"]["limb_speed"]:
                 tr.last_fast_ts = now
 
-        # kavga: yakın iki kişi + en az birinde yakın zamanda hızlı kol hareketi.
+        # kavga (model): veri setleriyle eğitilmiş sınıflandırıcı varsa kuralın yerine o karar verir
+        if self.fight_model is not None:
+            ids, prob = self._fight_by_model(tracks, now)
+            if ids:
+                status.fighting_ids = ids
+                ev = self._emit("fight", prob, now)
+                if ev:
+                    events.append(ev)
+        # kavga (kural, yedek): yakın iki kişi + en az birinde yakın zamanda hızlı kol hareketi.
         # Süre çift bazında değil sahne bazında tutulur: hızlı hareket ve düşük FPS'te takip numaraları
         # değişiyor, çift bazında sayaç sürekli sıfırlanıyordu (Kavga.mp4 testinde 26 sn'de tek event).
         fight_ids: set[int] = set()
         fight_confs: list[float] = []
-        for a, b in itertools.combinations(tracks, 2):
+        for a, b in (itertools.combinations(tracks, 2) if self.fight_model is None else ()):
             dist = float(np.linalg.norm(a.person.center - b.person.center))
             close = dist < c["fight"]["proximity_ratio"] * (a.person.scale + b.person.scale) / 2
             fast = now - max(a.last_fast_ts, b.last_fast_ts) <= c["fight"]["hold_s"]
@@ -355,6 +409,8 @@ class PoseDetector:
             label = f"#{tr.id} v={tr.mean_speed:.1f} kol={tr.limb_speed:.1f}" + (" YATAY" if tr.horizontal else "")
             cv2.putText(frame, label, (x1, max(15, y1 - 6)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 1, cv2.LINE_AA)
         info = f"kisi={len(tracks)} kume={st.crowd_size} kosan={st.running_count}"
+        if self.fight_model is not None:
+            info += f" kavga_p={self.fight_prob:.2f}"
         cv2.putText(frame, info, (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
         return frame
 

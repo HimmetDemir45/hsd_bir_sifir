@@ -21,3 +21,6 @@ uvicorn[standard]>=0.29
 
 # Telegram bildirimi
 requests>=2.31
+
+# Kavga modeli (öğrenilmiş sınıflandırıcı: tools/kavga_egit.py, ml/kavga_model.joblib)
+scikit-learn==1.9.1

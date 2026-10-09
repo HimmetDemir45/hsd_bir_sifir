@@ -36,6 +36,7 @@ def cfg():
 def pose_det(cfg, monkeypatch):
     monkeypatch.setattr(pose_mod, "YOLO", DummyYOLO)
     cfg["pose"]["every_n_frames"] = 1
+    cfg["pose"]["fight_model"]["enabled"] = False   # kural testleri kuralı ölçer; model ayrı testte (FakeFightModel)
     return PoseDetector(cfg, "cam1", "kantin")
 
 
@@ -115,6 +116,27 @@ def test_fall_once_after_duration(pose_det):
     falls = [t for t, typ in run_pose(pose_det, frames) if typ == "fall"]
     assert len(falls) == 1, "her düşmede tek event"
     assert falls[0] - 0.4 >= pose_det.cfg["fall"]["min_duration_s"] - 1e-6
+
+
+class FakeFightModel:
+    """Öğrenilmiş kavga modeli yerine: özelliklerden bağımsız sabit olasılık döndürür."""
+    def __init__(self, p):
+        self.p = p
+
+    def predict_proba(self, X):
+        return np.array([[1 - self.p, self.p]] * len(X))
+
+
+def test_fight_model_needs_consecutive_windows(pose_det):
+    pose_det.fight_meta = {"window_s": 1.5, "threshold": 0.8}
+    pose_det.cfg["fight_model"] = {"threshold": None, "eval_every_s": 0.5, "min_consecutive": 2}
+    calm = [[person(100, 300), person(500, 300)] for _ in range(20)]
+    pose_det.fight_model = FakeFightModel(0.5)          # eşik altı -> kavga yok
+    assert "fight" not in [typ for _, typ in run_pose(pose_det, calm)]
+    pose_det.reset()
+    pose_det.fight_model = FakeFightModel(0.95)         # eşik üstü, art arda 2 değerlendirme -> kavga
+    fights = [t for t, typ in run_pose(pose_det, calm) if typ == "fight"]
+    assert fights and fights[0] >= 0.5, "tek değerlendirme yetmemeli (min_consecutive)"
 
 
 def test_slow_lying_down_is_not_fall(pose_det):
