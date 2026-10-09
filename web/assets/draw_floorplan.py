@@ -20,7 +20,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 S = 3                      # süper örnekleme (kenar yumuşatma için 3x çiz, sonra küçült)
 W, H = 760, 500
-PAPER = (245, 243, 238)    # style.css .plan-frame ile aynı
+PAPER = (249, 250, 251)    # style.css .plan-frame / #plan (#f9fafb) ile aynı
 WALL = (70, 72, 76)
 INNER = (110, 112, 116)
 FURN = (200, 195, 185)
