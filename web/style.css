@@ -153,6 +153,27 @@ h2 { margin: 0 0 0.75rem; font-size: var(--fs-sm); color: var(--muted); font-wei
 }
 .sound.on:hover { background: oklch(0.78 0.15 155 / 0.22); }
 
+/* Demo etiketi: B'nin JS'i demo modunda hidden'ı kaldırır */
+.demo-tag {
+  display: inline-block; margin-left: 0.4rem; padding: 0.1rem 0.45rem; vertical-align: 0.2em;
+  font-size: 0.6em; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--bg); background: var(--focus); border-radius: var(--radius-sm); cursor: help;
+}
+
+/* Bağlantı koptu: #conn.off iken görünür. Sayfa açılırken bağlantı kurulana kadar "off" olduğu
+   için şerit 2 sn gecikmeyle belirir (anlık yanıp sönme olmasın). */
+.offline-banner {
+  display: none; position: sticky; top: 3.4rem; z-index: 4;
+  margin: 0.75rem 1.25rem 0; padding: 0.7rem 1rem; border-radius: var(--radius);
+  font-size: var(--fs-sm); color: var(--text);
+  background: oklch(0.30 0.08 25); border: 1px solid oklch(0.65 0.225 25 / 0.6);
+}
+.offline-banner strong { color: var(--red-ink); }
+body:has(#conn.off) .offline-banner { display: block; opacity: 0; animation: banner-in 0.3s var(--ease-out) 2s forwards; }
+@keyframes banner-in { from { opacity: 0; transform: translateY(-0.4rem); } to { opacity: 1; transform: none; } }
+/* Bağlantı yokken liste ve görüntü güncel değil: hafifçe soluklaşır */
+body:has(#conn.off) :is(#alerts, .cam-wrap) { opacity: 0.6; transition: opacity 0.3s 2s; }
+
 /* Dar ekranlar: önce lejant, sonra gizlilik notu ve alt başlık çekilir */
 @media (max-width: 1280px) { .legend { display: none; } }
 @media (max-width: 900px) {
@@ -167,13 +188,31 @@ main.lower { padding-top: 0; }
 section { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.9rem; min-width: 0; }
 
 /* ---------- Canlı görüntü ---------- */
-#cam { max-width: 100%; max-height: 65vh; margin: 0 auto; object-fit: contain; border-radius: var(--radius-sm); background: #000; display: block; }
+.cam-wrap { display: grid; place-items: center; min-height: 14rem; border-radius: var(--radius-sm); background: oklch(0.13 0.01 240); overflow: hidden; }
+.cam-wrap > * { grid-area: 1 / 1; }
+#cam { position: relative; max-width: 100%; max-height: 65vh; object-fit: contain; background: #000; display: block;
+  font-size: 0; color: transparent; }   /* kare gelmeden / koptuğunda kırık resim + alt metni bekleme ekranını örtmesin */
+/* Chrome ::after'ı sadece yüklenemeyen resimde çizer: kırık resim simgesini bekleme zeminiyle örter */
+#cam::after { content: ""; position: absolute; inset: 0; background: oklch(0.13 0.01 240); }
+.cam-wait { display: grid; justify-items: center; gap: 0.3rem; padding: 2rem 1rem; text-align: center; font-size: var(--fs-sm); color: var(--muted); }
+.cam-wait::before {   /* tarama çizgisi: "bağlanıyor" hissi, ağ isteği yok */
+  content: ""; width: 2.5rem; height: 2.5rem; margin-bottom: 0.4rem; border-radius: 50%;
+  border: 3px solid var(--raised-hi); border-top-color: var(--focus); animation: spin 1s linear infinite;
+}
+.cam-wait-title { font-size: var(--fs-md); font-weight: 600; color: var(--text); }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---------- Uyarı akışı ----------
    Kartı JS üretir: li.alert.<seviye>[.fresh] > .top(.lvl, saat) + ul(sebepler) + a.clip-link? + .status
    Seviye: renk + şekil (sarı daire, turuncu üçgen, kırmızı sekizgen) + metin. Görsel ağırlık seviyeyle artar.
    data-status (pending/confirmed/dismissed) JS'ten gelince durum kuralları kendiliğinden devreye girer. */
 #count { font-variant-numeric: tabular-nums; color: var(--faint); }
+#alerts:empty::before {
+  content: "Şu an uyarı yok\A Sistem izliyor. Yeni uyarılar burada anında görünür.";
+  white-space: pre-line; display: block; padding: 2.5rem 1rem; text-align: center;
+  font-size: var(--fs-sm); line-height: 1.6; color: var(--muted);
+  border: 1px dashed var(--line); border-radius: var(--radius);
+}
 #alerts { list-style: none; margin: 0; padding: 0 0.25rem 0 0; max-height: 75vh; overflow-y: auto; display: grid; gap: 0.5rem; align-content: start; }
 
 .alert {
@@ -295,7 +334,7 @@ section { background: var(--panel); border: 1px solid var(--line); border-radius
 .modal-box {
   position: relative;
   /* Görüntü sütunu 'auto': görüntünün kendi oranıyla genişler. Dikey video dar, yatay geniş sütun; yanlarda siyah boşluk kalmaz */
-  display: grid; grid-template-columns: auto minmax(22rem, 30rem);
+  display: grid; grid-template-columns: auto minmax(22rem, clamp(30rem, 32vw, 38rem));
   max-width: 100%; max-height: 100%; overflow: hidden;
   background: var(--panel); border: 2px solid var(--red); border-radius: var(--radius-lg);
   box-shadow: 0 30px 80px -20px oklch(0 0 0 / 0.8);
@@ -322,15 +361,15 @@ section { background: var(--panel); border: 1px solid var(--line); border-radius
 .modal-icon { width: 3.25rem; height: 3.25rem; flex: none; color: var(--red); animation: icon-beat 1.1s ease-in-out infinite alternate; }
 @keyframes icon-beat { to { transform: scale(1.08); } }
 .modal-title {
-  margin: 0; font-family: var(--font-display); font-size: var(--fs-2xl); line-height: 1.05; font-weight: 700;
+  margin: 0; font-family: var(--font-display); font-size: clamp(var(--fs-2xl), 3.2vw, 3.5rem); line-height: 1.05; font-weight: 700;
   color: var(--red-ink); text-transform: uppercase; letter-spacing: 0.01em;
 }
-.modal-zone { margin: 0.3rem 0 0; font-size: var(--fs-xl); font-weight: 600; line-height: 1.2; color: var(--text); }
+.modal-zone { margin: 0.3rem 0 0; font-size: clamp(var(--fs-xl), 2.2vw, 2.4rem); font-weight: 600; line-height: 1.2; color: var(--text); }
 .modal-zone-label { font-size: var(--fs-sm); font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-right: 0.25rem; }
 
 .modal-reasons { margin: 0; padding: 0.85rem 1rem; list-style: none; display: grid; gap: 0.4rem;
   background: var(--red-soft); border: 1px solid oklch(0.65 0.225 25 / 0.35); border-radius: var(--radius);
-  font-size: var(--fs-lg); font-weight: 600; line-height: 1.3; }
+  font-size: clamp(1.25rem, 1.55vw, 1.75rem); font-weight: 600; line-height: 1.3; }
 .modal-reasons li { display: flex; gap: 0.6rem; align-items: baseline; }
 .modal-reasons li::before { content: ""; flex: none; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--red); transform: translateY(-0.15em); }
 .modal-body > .clip-link { align-self: flex-start; }
@@ -347,7 +386,7 @@ section { background: var(--panel); border: 1px solid var(--line); border-radius
 .btn:active:not(:disabled) { transform: translateY(1px); }
 .btn svg { width: 1.4rem; height: 1.4rem; flex: none; }
 .btn small { font-size: 0.8em; font-weight: 600; opacity: 0.85; }
-.btn.confirm { font-size: var(--fs-lg); padding: 1.1rem 1.25rem; color: #fff; background: oklch(0.55 0.21 25);
+.btn.confirm { font-size: clamp(var(--fs-lg), 1.5vw, 1.65rem); padding: 1.1rem 1.25rem; color: #fff; background: oklch(0.55 0.21 25);
   box-shadow: 0 8px 20px -10px oklch(0 0 0 / 0.7), inset 0 1px 0 oklch(1 0 0 / 0.15); }
 .btn.confirm:hover:not(:disabled) { background: oklch(0.60 0.22 25); }
 .btn.dismiss { font-size: var(--fs-md); color: var(--text); background: transparent; border-color: var(--raised-hi); }
@@ -381,6 +420,7 @@ section { background: var(--panel); border: 1px solid var(--line); border-radius
 .clip-link { display: inline-block; margin: 0.25rem 0; color: var(--link); font-size: var(--fs-sm); text-decoration: underline; text-underline-offset: 0.2em; }
 
 @media (prefers-reduced-motion: reduce) {
-  .modal::before, .modal-icon, .modal-box { animation: none; }
+  .modal::before, .modal-icon, .modal-box, .cam-wait::before { animation: none; }
+  body:has(#conn.off) .offline-banner { animation: none; opacity: 1; }
   .alert.fresh, .alert.red.fresh, .alert .status::before { animation: none !important; }
 }
