@@ -25,6 +25,13 @@ zones:
   koridor_1:  {name: 1. Kat Koridor, type: corridor, polygon: [[320, 50], [700, 50], [700, 120], [320, 120]]}
   spor_salonu: {name: Spor Salonu,  type: gym,     polygon: [[50, 220], [400, 220], [400, 450], [50, 450]]}
   bahce:      {name: Bahçe,        type: outdoor, polygon: [[420, 220], [700, 220], [700, 450], [420, 450]]}
+  # Sınıf şeridi (planda y 130-210). compact: dar oda; ısı haritasında ad yazılmaz (planda zaten yazılı), sadece sayı rozeti.
+  # type: classroom/office için audio.db_thresholds'ta tip yoksa 'default' eşik kullanılır (A'nın bölümü).
+  sinif_1a:   {name: Sınıf 1-A,    type: classroom, compact: true, polygon: [[312, 132], [408, 132], [408, 208], [312, 208]]}
+  sinif_1b:   {name: Sınıf 1-B,    type: classroom, compact: true, polygon: [[412, 132], [508, 132], [508, 208], [412, 208]]}
+  rehberlik:  {name: Rehberlik,    type: office,    compact: true, polygon: [[512, 132], [598, 132], [598, 208], [512, 208]]}
+  mudur_yrd:  {name: Müdür Yrd.,   type: office,    compact: true, polygon: [[602, 132], [648, 132], [648, 208], [602, 208]]}
+  wc:         {name: WC,           type: corridor,  compact: true, polygon: [[652, 132], [708, 132], [708, 208], [652, 208]]}
 
 # Ders / teneffüs çizelgesi (HH:MM). Bu aralıklar dışındaki zaman "ders" sayılır.
 schedule:

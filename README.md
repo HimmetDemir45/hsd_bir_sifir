@@ -52,7 +52,7 @@ Her çalıştırmada `--fresh` ile eski kayıtları silip temiz başlayın.
 ```bash
 python main.py --demo --fresh
 ```
-Yaklaşık 35 sn içinde sırayla: 3 sarı (bağırma, koşuşma, cam) → eskalasyonla turuncu → kavga (turuncu) → bıçak (kırmızı).
+Yaklaşık 40 sn içinde: önce koridorda ve Sınıf 1-A'da birer küçük sarı olay (ısı haritasında başka bölgeler de görünsün), sonra Kantin'de sırayla 3 sarı (bağırma, koşuşma, cam) → eskalasyonla turuncu → kavga (turuncu) → bıçak (kırmızı).
 Hızlı deneme için `--speed 5`.
 
 **2. Gerçek kamera ve ses:**
