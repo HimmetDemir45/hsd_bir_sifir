@@ -109,10 +109,23 @@ def test_fight_survives_short_dropout(pose_det):
 
 
 def test_fall_once_after_duration(pose_det):
-    frames = [[person(300, 300, horizontal=i >= 2)] for i in range(25)]
+    # ani düşüş: dik dururken (merkez y=300) 0.2 sn içinde yerde yatay (merkez y=380, 0.4 x boy aşağı)
+    frames = [[person(300, 380, horizontal=True) if i >= 2 else person(300, 300)] for i in range(25)]
     falls = [t for t, typ in run_pose(pose_det, frames) if typ == "fall"]
     assert len(falls) == 1, "her düşmede tek event"
     assert falls[0] - 0.4 >= pose_det.cfg["fall"]["min_duration_s"] - 1e-6
+
+
+def test_slow_lying_down_is_not_fall(pose_det):
+    # yatağa uzanma gibi: yerinde (merkez inmeden) yataya geçiş -> ani düşüş yok -> düşme değil
+    frames = [[person(300, 300, horizontal=i >= 2)] for i in range(25)]
+    assert "fall" not in [typ for _, typ in run_pose(pose_det, frames)]
+
+
+def test_fall_survives_pose_flicker(pose_det):
+    # yatayken tek karelik "dik" titremesi süreyi sıfırlamamalı (gap_s)
+    frames = [[person(300, 300)] if i < 2 or i == 8 else [person(300, 380, horizontal=True)] for i in range(25)]
+    assert "fall" in [typ for _, typ in run_pose(pose_det, frames)]
 
 
 def test_running_vs_walking(pose_det, cfg, monkeypatch):

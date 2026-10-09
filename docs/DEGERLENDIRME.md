@@ -15,12 +15,12 @@ Veri setleri lisans gereği git'te yok (repo dışında `../hsd_datasets/`).
 
 | Detektör | Veri seti | Şu anki ayar: yakalama | Şu anki ayar: yanlış alarm | Yorum |
 |---|---|---|---|---|
-| Cam kırılması | ESC-50 (40 cam / 1960 diğer) | %20 | **%0** | Eşik 0.12 → 0.05 ile **%45 yakalama, yanlış alarm yine %0** |
+| Cam kırılması | ESC-50 (40 cam / 1960 diğer) | **%45** (eski eşik 0.12: %20) | **%0** | Eşik 0.12 → 0.05 yapıldı |
 | Çığlık | ESC-50 (negatif) | — | %0.9 | Çoğu bebek ağlaması (anlamca yakın) |
 | Bağırma | ESC-50 (negatif) | — | %0.1 | |
 | Silah sesi (kırmızı, ≥0.4) | ESC-50 (negatif) + 4 CC0 silah kaydı | 4/4 | %2.4 | Konserve açma (17), havai fişek (11), cam kırılması (6) |
 | Kavga | Surveillance Camera Fight (150 kavga / 150 normal, **2-3 sn** klip) | %7 | %2 | Sinyal var ama 1 sn süreklilik kısa klipte nadiren sağlanıyor (aşağıda) |
-| Düşme | UR Fall (15 düşme / 14 günlük aktivite) | %0 | %0 | Klipler düşmeden ~1.3 sn sonra bitiyor; 3 sn kuralı bu sette ölçülemez (aşağıda) |
+| Düşme | UR Fall (15 düşme / 14 günlük aktivite) | %0 | %0 | Klipler düşmeden ~1.3 sn sonra bitiyor; 3 sn kuralı bu sette ölçülemez. "Ani düşüş" şartı eklendi (aşağıda) |
 
 ## Kavga
 Klipte en az bir kez görülen koşullar (38 + 38 klip örneklem):
@@ -41,11 +41,25 @@ kavga sınıflandırıcısı olurdu (hackathon süresine sığmaz).
 Duruş tespiti etiketle uyumlu (ölçülen "yatay" süre ≈ etiketli "yerde yatma" süresi; ör. fall-06: 1.8 / 2.0 sn).
 Ama veri setinde kişi düşmeden sonra ortalama **1.3 sn** (en fazla 2.0 sn) görünüyor; bizim kural 3 sn yatmayı bekliyor.
 Eşik taraması: 0.5 sn → %80 / %29, **1.0 sn → %53 / %21**, 1.5 sn → %13 / %7, 3 sn → %0 / %0.
-Yanlış alarmlar "yatağa uzanma" gibi bilinçli yatma hareketlerinden: kural düşmeyi yavaşça uzanmaktan ayırmıyor.
-İyileştirme: yatay duruştan önce **ani geçiş** (kısa sürede dikey → yatay, kalçanın hızlı inişi) şartı.
+Yanlış alarmlar "yatağa uzanma" gibi bilinçli yatma hareketlerinden: kural düşmeyi yavaşça uzanmaktan ayırmıyordu.
+
+**Eklenen "ani düşüş" şartı** (`pose.fall.require_sudden`): yataya geçmeden en fazla `transition_s` (1 sn) önce yakında
+dik duran biri olmalı ve gövde merkezi en az `drop_ratio` x boy aşağı inmiş olmalı. Ayrıca yatay duruş kısa süre
+(`gap_s` 0.5 sn) kesilirse süre artık sıfırlanmıyor. Tarama (yakalama / yanlış alarm):
+
+| ayar | 0.5 sn | 1.0 sn | 1.5 sn |
+|---|---|---|---|
+| ani düşüş yok | %93 / %36 | %67 / %36 | %40 / %7 |
+| **ani düşüş, drop 0.15 (seçilen)** | **%67 / %14** | %40 / %7 | %20 / %0 |
+| ani düşüş, drop 0.2 | %60 / %14 | %33 / %7 | %13 / %0 |
+| ani düşüş, drop 0.3 | %27 / %7 | %20 / %0 | %0 / %0 |
+
+Aynı yakalamada (%67) yanlış alarm %36 → %14. Süre CLAUDE.md gereği **3 sn** kaldı (veri seti bunu ölçemiyor:
+kişi en fazla 2 sn yerde görünüyor); şart yalnızca yavaşça uzanmanın alarm vermesini engelliyor.
 
 ## Ses
-- Cam kırılması: tüm eşiklerde yanlış alarm %0; eşik düşürülebilir (0.05 → %45 yakalama).
+- Cam kırılması: tüm eşiklerde yanlış alarm %0 → eşik 0.12'den **0.05**'e indirildi (yakalama %20 → %45, 18/40;
+  yanlış alarm 0/1960). Demo senaryosu değişmedi.
 - Silah sesi kırmızı eşiği taraması (ESC-50 yanlış alarm): 0.25 → %3.6, **0.4 → %2.4**, 0.5 → %1.6, 0.6 → %0.9.
   Kendi silah kayıtlarımız 0.41 / 0.50 / 0.59 / 0.80: 0.5'te 3/4, 0.4'te 4/4. Kırmızıda insan onayı olduğundan
   kaçırmamak öncelikli: 0.4 korunuyor. Bilinen risk: kantinde konserve açma, havai fişek.

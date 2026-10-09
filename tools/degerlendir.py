@@ -97,8 +97,10 @@ def pose_clip(pose, frames: Iterator[tuple[float, np.ndarray]], max_side: int) -
         # kuralla aynı: süre sadece kavga o karede aktifken ölçülür (gap_s içindeki boşluklarda değil)
         if pose._fight_since is not None and pose._fight_last >= ts - 1e-9:
             fight_max = max(fight_max, ts - pose._fight_since)
+        require_sudden = pose.cfg["fall"].get("require_sudden", False)
         for tr in tracks:
-            if tr.fallen_since is not None:
+            # kuralla aynı: yatay süre sadece (gerekiyorsa) ani düşüşle başlayan bölümde sayılır
+            if tr.fallen_since is not None and tr.horizontal and (tr.fall_sudden or not require_sudden):
                 fall_max = max(fall_max, ts - tr.fallen_since)
             limb_max = max(limb_max, tr.limb_speed)
             speed_max = max(speed_max, tr.mean_speed)

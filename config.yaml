@@ -74,6 +74,10 @@ pose:
     torso_angle_deg: 60        # gövdenin dikeyle açısı bundan büyükse "yatay"
     aspect_ratio: 1.2          # keypoint yoksa: kutu genişlik/yükseklik bundan büyükse "yatay"
     min_duration_s: 3.0
+    require_sudden: true       # yataya geçiş ani olmalı (yavaşça uzanma düşme sayılmaz; UR Fall değerlendirmesi)
+    transition_s: 1.0          # ...yatay olmadan en fazla bu kadar sn önce dik duruyordu
+    drop_ratio: 0.15           # ...ve o andan beri kutu merkezi en az bu kadar x boy aşağı indi (UR Fall: aynı yakalamada yanlış alarm %36 -> %14)
+    gap_s: 0.5                 # yatay duruş bu kadar kısa kesilirse (duruş titremesi) süre sıfırlanmaz
   running:
     mean_speed: 1.2            # ortalama keypoint hızı (kişi boyu / sn)
     min_people: 2
@@ -116,7 +120,7 @@ audio:
   # Modele göre event eşiği. efficientat ESC-50 testinde: cam kırılması 0.15-0.19, ilgisiz sesler (alkış, kapı,
   # bebek ağlaması, metro) <= 0.04. YAMNet silah: 4 silah kaydı 0.26-0.85; cam kırılması 0.20, alkış/kapı/metro <= 0.01.
   min_conf:
-    efficientat: {scream: 0.15, shout: 0.15, gunshot: 0.15, glass: 0.12}
+    efficientat: {scream: 0.15, shout: 0.15, gunshot: 0.15, glass: 0.05}   # cam: ESC-50 0.05 -> %45 yakalama, %0 yanlış alarm
     yamnet:      {scream: 0.2, shout: 0.2, gunshot: 0.25, glass: 0.2}
   # dB = dBFS + db_offset. Mikrofona göre kalibre edin: sessiz odada ~35-45, normal konuşmada ~55-65 göstermeli.
   db_offset: 100

@@ -23,6 +23,7 @@ import itertools
 import math
 import queue
 import time
+from collections import deque
 from dataclasses import dataclass, field
 
 import cv2
@@ -69,6 +70,8 @@ class Track:
     last_fast_ts: float = -1e9
     fallen_since: float | None = None
     fall_emitted: bool = False
+    fall_sudden: bool = False      # yataya geçiş ani mi oldu (düşme) yoksa yavaş mı (uzanma)
+    last_horizontal_ts: float = -1e9
     horizontal: bool = False
 
 
@@ -114,6 +117,8 @@ class PoseDetector:
         self._fight_since: float | None = None
         self._fight_last = -1e9
         self._running_since: float | None = None
+        # sahnede dik duran kişilerin son kayıtları (zaman, merkez x, merkez y, kutu yüksekliği): ani düşüş için
+        self._upright: deque[tuple[float, float, float, float]] = deque(maxlen=256)
         self._last_emit: dict[str, float] = {}
         self.status = PoseStatus()
 
@@ -259,15 +264,32 @@ class PoseDetector:
             if ev:
                 events.append(ev)
 
-        # düşme: gövde yatay, min süre; her düşme bölümünde bir kez
+        # düşme: dikten yataya ANİ geçiş + gövde min süre yatay; her düşme bölümünde bir kez.
+        # Ani geçiş şartı UR Fall değerlendirmesinden: yavaşça uzanma (yatak) da yatay duruş üretiyordu.
+        fc = c["fall"]
         for tr in tracks:
             tr.horizontal = self._is_horizontal(tr.person)
+            x1, y1, x2, y2 = tr.person.box
+            cy, h = (y1 + y2) / 2, max(y2 - y1, 1)
             if not tr.horizontal:
-                tr.fallen_since, tr.fall_emitted = None, False
+                self._upright.append((now, (x1 + x2) / 2, cy, h))
+                # kısa kopma (duruş titremesi) düşmeyi sıfırlamasın
+                if tr.fallen_since is not None and now - tr.last_horizontal_ts > fc["gap_s"]:
+                    tr.fallen_since, tr.fall_emitted, tr.fall_sudden = None, False, False
                 continue
+            tr.last_horizontal_ts = now
             if tr.fallen_since is None:
                 tr.fallen_since = now
-            if now - tr.fallen_since >= c["fall"]["min_duration_s"]:
+                # Sahne bazlı: düşerken kutu uzundan genişe dönüp takip numarası değişebiliyor (UR Fall'da
+                # takip bazlı geçmiş düşmelerin çoğunu kaçırdı). Yakında kısa süre önce dik duran biri var mıydı?
+                cx = (x1 + x2) / 2
+                tr.fall_sudden = any(
+                    now - t <= fc["transition_s"] and abs(cx - cx0) <= h0 and cy - cy0 >= fc["drop_ratio"] * h0
+                    for t, cx0, cy0, h0 in self._upright
+                )
+            if fc["require_sudden"] and not tr.fall_sudden:
+                continue
+            if now - tr.fallen_since >= fc["min_duration_s"]:
                 status.fallen_ids.add(tr.id)
                 if not tr.fall_emitted:
                     ev = self._emit("fall", tr.person.conf, now)
