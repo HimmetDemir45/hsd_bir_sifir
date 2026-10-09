@@ -113,7 +113,7 @@ def camera_loop(cfg: dict, cam_cfg: dict, source: str, events: "queue.Queue[Even
 
 
 def audio_loop(cfg: dict, zone_id: str, audio_src: str, events: "queue.Queue[Event]",
-               stop: threading.Event) -> None:
+               stop: threading.Event, delay_s: float = 0.0) -> None:
     try:
         from detectors.audio_cls import AudioDetector
     except ImportError:
@@ -122,7 +122,12 @@ def audio_loop(cfg: dict, zone_id: str, audio_src: str, events: "queue.Queue[Eve
     try:
         # "mic" -> config'deki audio.input (mikrofon); aksi halde wav dosyası (gerçek zamanlı oynatılır)
         source = None if audio_src == "mic" else audio_src
-        AudioDetector(cfg, zone_id, events).run(stop, source=source)
+        detector = AudioDetector(cfg, zone_id, events)  # model yüklemesi bekleme süresinin içinde yapılır
+        if delay_s > 0:
+            print(f"[audio] {delay_s:g} sn sonra başlayacak (tarayıcıyı açmak için zaman)", flush=True)
+            if stop.wait(delay_s):
+                return
+        detector.run(stop, source=source)
     except Exception as e:  # ses bozulsa görüntü hattı çalışmaya devam etsin
         print(f"[audio] durdu: {e!r}")
 
@@ -131,6 +136,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="OkulKalkan")
     ap.add_argument("--source", default=None, help="0 = webcam, rtsp://..., video dosyası (config'i ezer)")
     ap.add_argument("--audio", nargs="?", const="mic", default=None, help="'mic' veya wav dosyası")
+    ap.add_argument("--audio-delay", type=float, default=0.0, metavar="SN",
+                    help="sesi bu kadar saniye sonra başlat (tarayıcı geç açılırsa ilk uyarılar kaçmasın)")
     ap.add_argument("--demo", action="store_true", help="kamera yerine hazır sahte senaryo")
     ap.add_argument("--speed", type=float, default=1.0, help="--demo zaman hızlandırma")
     ap.add_argument("--db", default="storage/events.db")
@@ -251,7 +258,8 @@ def main() -> None:
                   events, frames, pose_holder, stop, clip_buf)))
     if args.audio and not args.demo:
         threads.append(threading.Thread(target=audio_loop, name="audio", daemon=True,
-                                        args=(cfg, cam_cfg["zone_id"], args.audio, events, stop)))
+                                        args=(cfg, cam_cfg["zone_id"], args.audio, events, stop,
+                                              args.audio_delay)))
 
     def do_demo_reset() -> None:
         """Sadece --demo: senaryoyu durdur, kayıtları ve hafızaları temizle, istemcilere bildir, baştan başlat."""

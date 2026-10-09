@@ -61,6 +61,7 @@ python main.py --fresh                                               # webcam
 python main.py --fresh --source test_media/kavga.mp4                 # video dosyası
 python main.py --fresh --source test_media/kavga.mp4 --audio test_media/ciglik.wav
 python main.py --fresh --audio                                       # mikrofon
+python main.py --fresh --source test_media/kavga.mp4 --audio test_media/ciglik.wav --audio-delay 30   # sesi 30 sn geciktir (tarayıcıyı açmak için zaman)
 ```
 
 **Dashboard'da gösterilecekler**
