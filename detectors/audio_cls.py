@@ -161,10 +161,14 @@ class AudioDetector:
         thresholds = self.cfg["db_thresholds"]
         self.db_threshold = thresholds.get(zone_type, thresholds["default"])
 
+        self.db_rule_enabled = True  # run() dosya kaynağında config'e göre kapatır
+        self.reset()
+
+    def reset(self) -> None:
+        """Ses tamponu ve event durumunu sıfırlar (modeller yeniden yüklenmez). Değerlendirme klibi için."""
         self._buf = np.zeros(self.window, dtype=np.float32)
         self._pending = np.zeros(0, dtype=np.float32)
         self._loud_hops = 0
-        self.db_rule_enabled = True  # run() dosya kaynağında config'e göre kapatır
         self._last_emit: dict[str, float] = {}
         self._last_conf: dict[str, float] = {}
         self.last_db: float = 0.0
