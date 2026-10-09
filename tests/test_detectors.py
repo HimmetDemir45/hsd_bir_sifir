@@ -81,7 +81,8 @@ def test_config_keeps_detector_settings(cfg):
         assert key in p, f"privacy.{key} eksik"
     # dedektörün silah eşiği fusion'ın kırmızı eşiğinden yüksek olursa kırmızı uyarı hiç oluşamaz
     assert a["min_conf"]["yamnet"]["gunshot"] <= cfg["alerts"]["red"]["gunshot_min_conf"]
-    assert cfg["weapon"]["min_conf"] <= cfg["alerts"]["red"]["weapon_min_conf"]
+    # silah dedektörünün her tip eşiği fusion kırmızı eşiğinin altına inerse dedektör basar ama kırmızı oluşmaz: tutarlılık
+    assert min(cfg["weapon"]["min_conf"].values()) >= cfg["alerts"]["red"]["weapon_min_conf"]
 
 
 # ---------------- poz ----------------
@@ -154,6 +155,16 @@ def test_weapon_three_of_five_and_cooldown(cfg, monkeypatch):
     seq = [[strong], [], [weak], [strong], [], [strong], [strong], [strong]]
     hits = [i for i, dets in enumerate(seq) if det.update(dets, now=100 + i * 0.1)]
     assert hits == [6], "son 5 karenin 3'ünde güçlü tespit olunca bir kez (bekleme süresi)"
+
+
+def test_weapon_alternating_models_only_update_evaluated(cfg, monkeypatch):
+    # sırayla çalıştırmada bu karede modeli çalışmayan tipin penceresine 0 eklenmemeli (pencere seyrelmesin)
+    monkeypatch.setattr(weapon_mod, "YOLO", DummyYOLO)
+    det = WeaponDetector(cfg, "cam1", "kantin")
+    det._evaluated = {"knife"}
+    det.update([Detection("knife", "knife", 0.9, (0, 0, 10, 10))], now=100.0)
+    assert list(det.history["knife"]) == [0.9]
+    assert all(len(h) == 0 for t, h in det.history.items() if t != "knife")
 
 
 # ---------------- ses ----------------
