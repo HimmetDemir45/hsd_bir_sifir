@@ -38,6 +38,36 @@ def feed(out_queue: "queue.Queue[Event]", stop_event: threading.Event, speed: fl
                             camera_id=cam, zone_id=zone, ts=time.time()))
 
 
+class DemoController:
+    """Senaryoyu başlatır / durdurur / baştan başlatır (dashboard'daki "demoyu yeniden başlat" için)."""
+
+    def __init__(self, out_queue: "queue.Queue[Event]", speed: float = 1.0) -> None:
+        self.out_queue = out_queue
+        self.speed = speed
+        self._lock = threading.Lock()
+        self._run_stop: threading.Event | None = None
+        self._thread: threading.Thread | None = None
+
+    def start(self) -> None:
+        with self._lock:
+            self._stop_locked()
+            self._run_stop = threading.Event()
+            self._thread = threading.Thread(target=feed, args=(self.out_queue, self._run_stop, self.speed),
+                                            name="demo", daemon=True)
+            self._thread.start()
+
+    def stop(self) -> None:
+        with self._lock:
+            self._stop_locked()
+
+    def _stop_locked(self) -> None:
+        if self._run_stop is not None:
+            self._run_stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=2.0)
+        self._run_stop = self._thread = None
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--speed", type=float, default=1.0, help="zaman hızlandırma çarpanı")

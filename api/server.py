@@ -8,7 +8,7 @@ import asyncio
 import threading
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import cv2
 import numpy as np
@@ -52,11 +52,15 @@ class Hub:
         self._loop = loop
 
     def publish(self, alert: dict[str, Any]) -> None:
-        """Herhangi bir thread'den çağrılabilir."""
+        """Alert iletir. Herhangi bir thread'den çağrılabilir."""
+        self.publish_message({"type": "alert", "alert": alert})
+
+    def publish_message(self, msg: dict[str, Any]) -> None:
+        """Ham WebSocket mesajı (ör. {"type": "reset"})."""
         if self._loop is None:
             return
         for q in list(self._clients):
-            self._loop.call_soon_threadsafe(q.put_nowait, alert)
+            self._loop.call_soon_threadsafe(q.put_nowait, msg)
 
 
 def _placeholder_jpeg(text: str) -> bytes:
@@ -66,7 +70,7 @@ def _placeholder_jpeg(text: str) -> bytes:
 
 
 def create_app(cfg: dict[str, Any], storage: Storage, frames: FrameStore, hub: Hub,
-               notifier: Any | None = None) -> FastAPI:
+               notifier: Any | None = None, demo_reset: Callable[[], None] | None = None) -> FastAPI:
     app = FastAPI(title="OkulKalkan")
     waiting = _placeholder_jpeg("Kamera bekleniyor...")
 
@@ -89,6 +93,18 @@ def create_app(cfg: dict[str, Any], storage: Storage, frames: FrameStore, hub: H
     @app.get("/api/alerts")
     def alerts(limit: int = 100) -> list[dict]:
         return storage.list_alerts(limit)
+
+    @app.get("/api/mode")
+    def mode() -> dict:
+        return {"demo": demo_reset is not None}
+
+    @app.post("/api/demo/reset")
+    def reset_demo() -> dict:
+        # Sadece --demo modunda: gerçek kamera/ses çalışırken kayıtlar ASLA silinmez.
+        if demo_reset is None:
+            raise HTTPException(404, "Demo modu kapalı")
+        demo_reset()
+        return {"ok": True}
 
     def _set_status(alert_id: str, status: str) -> dict:
         # Not: "confirmed" sadece kayıttır; gerçek 112 araması YOK (simülasyon, bkz. CLAUDE.md).
@@ -143,8 +159,8 @@ def create_app(cfg: dict[str, Any], storage: Storage, frames: FrameStore, hub: H
         hub._clients.add(q)
         try:
             while True:
-                alert = await q.get()
-                await socket.send_json({"type": "alert", "alert": alert})
+                msg = await q.get()
+                await socket.send_json(msg)
         except (WebSocketDisconnect, RuntimeError):
             pass
         finally:

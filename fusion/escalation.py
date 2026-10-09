@@ -17,6 +17,10 @@ class RedTimeoutWatcher:
         self._tracked: dict[str, float] = {}  # alert id -> izlemeye başlanan an
         self._fired: set[str] = set()         # her uyarı için en fazla bir kez tetiklenir
 
+    def reset(self) -> None:
+        self._tracked.clear()
+        self._fired.clear()
+
     def track(self, alert_id: str, level: str, now: float) -> None:
         """Kırmızı uyarıyı izlemeye alır (dedup güncellemelerinde tekrar çağrılması zararsız)."""
         if not self.enabled or level != "red":

@@ -272,6 +272,38 @@ document.getElementById("confirmBtn").addEventListener("click", () => act("confi
 document.getElementById("dismissBtn").addEventListener("click", () => act("dismiss"));
 document.getElementById("closeBtn").addEventListener("click", () => { resultFor = null; updateModal(); });
 
+// ---------- Demo yeniden başlatma (sadece --demo modunda) ----------
+function resetView() {
+  alerts.clear();
+  resultFor = null;
+  modal.hidden = true;
+  setAlarm(false);
+  render(null);
+  refreshStats();
+}
+
+// Buton C'nin index.html'inde: <button id="demoResetBtn" hidden>. Yoksa bu bölüm sessizce atlanır.
+async function setupDemoReset() {
+  const btn = document.getElementById("demoResetBtn");
+  if (!btn) return;
+  try {
+    const mode = await (await fetch("/api/mode")).json();
+    if (!mode.demo) return;          // gerçek kamera modunda buton hiç görünmez
+  } catch (e) { return; }
+  btn.hidden = false;
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    try {
+      const res = await fetch("/api/demo/reset", { method: "POST" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+    } catch (e) {
+      console.error("demo yeniden başlatılamadı", e);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
 // Uyarı listesini sunucudan çekip birleştirir. İlk yüklemede ve HER WebSocket bağlantısında çağrılır:
 // liste çekildikten sonra WebSocket açılana kadar (veya bağlantı koptuğu sürede) gelen uyarılar kaybolmasın.
 async function syncAlerts() {
@@ -310,6 +342,7 @@ function connect() {
   ws.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
     if (msg.type === "alert") upsert(msg.alert, true);
+    else if (msg.type === "reset") resetView();   // demo yeniden başlatıldı: ekranı temizle
   };
   ws.onclose = () => {
     connEl.textContent = "bağlantı yok"; connEl.className = "conn off";
@@ -319,3 +352,4 @@ function connect() {
 }
 
 loadInitial().then(connect);
+setupDemoReset();
