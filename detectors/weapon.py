@@ -23,6 +23,7 @@ from ultralytics import YOLO
 
 from core.config import load_config, resolve_path
 from core.schema import Event
+from detectors import apply_thread_limit
 
 COLORS = {"gun": (0, 0, 255), "knife": (0, 128, 255)}  # BGR
 WEAK_COLOR = (160, 160, 160)
@@ -45,6 +46,7 @@ class WeaponDetector:
         out_queue: queue.Queue | None = None,
     ) -> None:
         self.cfg = cfg["weapon"]
+        self._full_cfg = cfg
         self.device = cfg["general"]["device"]
         self.imgsz = cfg["general"]["imgsz"]
         self.camera_id = camera_id
@@ -93,6 +95,7 @@ class WeaponDetector:
             device=self.device,
             verbose=False,
         )[0]
+        apply_thread_limit(self._full_cfg)  # ultralytics ilk tahminde thread sayısını eziyor: her tahminden sonra kontrol
         detections: list[Detection] = []
         for box in result.boxes:
             cid = int(box.cls)

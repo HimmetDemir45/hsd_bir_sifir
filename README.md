@@ -72,6 +72,8 @@ python main.py --fresh --audio                                       # mikrofon
 **Telegram (isteğe bağlı):** `.env` içine `TELEGRAM_BOT_TOKEN` ve `TELEGRAM_CHAT_ID` yazın, `config.yaml`'da `telegram.enabled: true` yapın.
 Kapalıyken veya internet yokken mesajlar sadece konsola yazılır; sistem çalışmaya devam eder.
 
+**Gerçek detektörlerle demo senaryosu, canlı demo kontrolleri ve bilinen sınırlar:** [docs/DEMO.md](docs/DEMO.md)
+
 **Sunum öncesi kontrol listesi**
 - [ ] `python -m tools.modelleri_indir` "tüm modeller hazır" diyor (internet varken)
 - [ ] `main.py` açılışında `[privacy] UYARI` satırı YOK (varsa YuNet inmemiş, yüzler kaçabilir)

@@ -31,6 +31,7 @@ from ultralytics import YOLO
 
 from core.config import load_config, resolve_path
 from core.schema import Event
+from detectors import apply_thread_limit
 
 # COCO keypoint indeksleri
 L_SH, R_SH, L_EL, R_EL, L_WR, R_WR, L_HIP, R_HIP = 5, 6, 7, 8, 9, 10, 11, 12
@@ -89,6 +90,7 @@ class PoseDetector:
         out_queue: queue.Queue | None = None,
     ) -> None:
         self.cfg = cfg["pose"]
+        self._full_cfg = cfg
         self.device = cfg["general"]["device"]
         self.imgsz = cfg["general"]["imgsz"]
         self.camera_id = camera_id
@@ -119,6 +121,7 @@ class PoseDetector:
             frame, imgsz=self.imgsz, conf=min(self.cfg["person_conf"], self.privacy_conf),
             device=self.device, verbose=False,
         )[0]
+        apply_thread_limit(self._full_cfg)  # ultralytics ilk tahminde thread sayısını eziyor: her tahminden sonra kontrol
         if result.keypoints is None or len(result.boxes) == 0:
             self.privacy_persons = []
             return []
