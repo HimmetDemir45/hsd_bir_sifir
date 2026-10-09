@@ -9,7 +9,8 @@ Sınıf şeridi odaları da bölge (B ısı haritasında çizer). Duvar iç yüz
 ara duvarlar x=410/510/600/650 (2.5 px), sol x=312, sağ x=707. Önerilen poligonlar (duvardan ~4 px içeride):
   Sınıf 1-A (316,132)-(406,203)   Sınıf 1-B (414,132)-(506,203)   Rehberlik (514,132)-(596,203)
   Müdür Yrd. (604,132)-(646,203)  WC (654,132)-(703,203)
-Bölge merkezine app.js ad/sayı veya rozet çizer: merkezler boş bırakılır; küçük odaların adı alt kenarda.
+Büyük bölgelerde app.js ad/sayıyı merkeze yazar (merkez boş); küçük odalarda adı plan yazar (ortada),
+app.js yalnız sayı rozetini alt kenara çizer.
 Kullanım (proje kökünden): python web/assets/draw_floorplan.py web/floorplan.png
 Gerekli: Pillow (matplotlib/ultralytics ile zaten gelir), Windows Bahnschrift fontu.
 """
@@ -146,10 +147,10 @@ for i in range(18):
     rect(x, 54, x + 17, 62, r=1)
 
 # ---------------- Sınıf şeridi (310..710, 128..207): her oda bir bölge (config.yaml zones) ----------------
-# Oda adları planda kalır ama ALT kenarda: merkez, app.js'in ısı rozeti/etiketi için boş
+# Oda adları ortada (y=170); app.js küçük odalarda sayı rozetini ALT kenara çizer (alt kenar - 11 px), çakışmasın
 rooms = [(310, 410, "Sınıf 1-A"), (410, 510, "Sınıf 1-B"), (510, 600, "Rehberlik"), (600, 650, "Müdür Yrd."), (650, 710, "WC")]
 for x1, x2, name in rooms:
-    text((x1 + x2) / 2, 199, name, 10 if len(name) < 10 else 9)
+    text((x1 + x2) / 2, 170, name, 10 if len(name) < 10 else 9)
 for x in (410, 510, 600, 650):
     wall([(x, 130), (x, 210)], 2.5, INNER)
 # sıralar (sınıflarda)
@@ -203,7 +204,7 @@ arrow(752, 85, 718)
 text(736, 104, "GİRİŞ", 9, c=WALL, weight=600)
 
 text(44, 482, "ZEMİN KAT", 12, c=WALL, anchor="lm", weight=700)
-text(122, 482, "Okul yerleşim planı · temsili", 10, anchor="lm")
+text(122, 482, "Okul yerleşim planı · Temsili", 10, anchor="lm")
 
 # kuzey oku
 nx, ny = 735, 470

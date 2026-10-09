@@ -20,15 +20,15 @@
     </div>
 
     <ul class="legend" aria-label="Uyarı seviyeleri">
-      <li class="legend-item yellow"><b>Sarı</b> kayıt</li>
-      <li class="legend-item orange"><b>Turuncu</b> ekip bildirimi</li>
-      <li class="legend-item red"><b>Kırmızı</b> insan onayı</li>
+      <li class="legend-item yellow"><b>Sarı</b> Kayıt</li>
+      <li class="legend-item orange"><b>Turuncu</b> Ekip bildirimi</li>
+      <li class="legend-item red"><b>Kırmızı</b> İnsan onayı</li>
     </ul>
 
     <div class="topbar-status">
       <span class="privacy" title="Kimlik tespiti yapılmaz. Yayında ve kayıtlarda yüzler bulanıklaştırılır; davranış yalnızca iskelet noktalarından analiz edilir.">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 10s2.8-5 7.5-5 7.5 5 7.5 5-2.8 5-7.5 5-7.5-5-7.5-5Z M3 17 17 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Yüz tanıma yok · yüzler bulanık
+        Yüz tanıma yok · Yüzler bulanık
       </span>
       <span id="conn" class="conn off">bağlantı yok</span>
       <button id="soundBtn" class="sound off" type="button">Alarm sesi kapalı (açmak için tıkla)</button>
@@ -77,7 +77,7 @@
     <section class="tile stat stat-total" aria-label="Listedeki uyarı sayısı">
       <span class="stat-label">Uyarı</span>
       <span class="stat-num" data-counter="all"></span>
-      <span class="stat-sub">listede, tüm seviyeler</span>
+      <span class="stat-sub">Listede, tüm seviyeler</span>
     </section>
 
     <section class="tile stat stat-levels" aria-label="Seviyelere göre uyarı sayısı">
@@ -91,7 +91,7 @@
 
     <section class="tile plan-panel">
       <div class="tile-head">
-        <h2>Kat planı · olay yoğunluğu</h2>
+        <h2>Kat planı · Olay yoğunluğu</h2>
         <div class="heat-legend" role="img" aria-label="Renk ölçeği: sarı az, kırmızı çok olay">
           <span>Az</span><i class="heat-bar"></i><span>Çok</span>
         </div>
@@ -99,12 +99,12 @@
       <div class="plan-frame">
         <canvas id="plan" width="760" height="500"></canvas>
       </div>
-      <p class="panel-note"><strong>Tüm zamanlar · algılama sayısı.</strong> Renk, her bölgedeki tespitleri (uyarıya dönüşmeyenler dahil) en yoğun bölgeye göre gösterir.</p>
+      <p class="panel-note"><strong>Tüm zamanlar · Algılama sayısı.</strong> Renk, her bölgedeki tespitleri (uyarıya dönüşmeyenler dahil) en yoğun bölgeye göre gösterir.</p>
     </section>
     <section class="tile weekly-panel">
       <div class="tile-head">
         <h2>Haftalık özet</h2>
-        <span class="tile-meta"><strong>Son 7 gün · uyarı sayısı</strong></span>
+        <span class="tile-meta"><strong>Son 7 gün · Uyarı sayısı</strong></span>
       </div>
       <table id="weekly">
         <thead><tr><th scope="col">Bölge</th><th scope="col" class="y">Sarı</th><th scope="col" class="o">Turuncu</th><th scope="col" class="r">Kırmızı</th></tr></thead>
@@ -120,7 +120,7 @@
     <div class="modal-box">
       <figure class="modal-media">
         <img id="redSnap" class="modal-snap" alt="Uyarı görüntüsü (yüzler bulanık)">
-        <figcaption class="modal-media-tag">Uyarı görüntüsü · yüzler bulanık</figcaption>
+        <figcaption class="modal-media-tag">Uyarı görüntüsü · Yüzler bulanık</figcaption>
       </figure>
 
       <div class="modal-body">
