@@ -121,8 +121,8 @@ function scheduleStats() {   // uyarı yağmurunda her seferinde değil, en fazl
   statsTimer = setTimeout(() => { statsTimer = null; refreshStats(); }, 1000);
 }
 
-// Sayfanın yerel fontu (web/assets, internetsiz); yüklenemezse sistem fontu
-const PLAN_FONT = '"Geist", system-ui, sans-serif';
+// Sayfa fontu Inter (C'nin teması, yerel dosya, internetsiz); henüz yüklü değilse Geist'e, o da yoksa sistem fontuna düşer
+const PLAN_FONT = '"Inter", "Geist", system-ui, sans-serif';
 // Font geç yüklenirse tuval ilk çizimde yedek fontla çizilmiş olur: font hazır olunca yeniden çiz
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => refreshStats());
 
@@ -142,9 +142,6 @@ function drawHeatmap(counts) {
       planCtx.fillStyle = "hsla(" + hue + ", 95%, 50%, " + (0.25 + 0.55 * t) + ")";
       planCtx.fill();
     }
-    planCtx.lineWidth = 2;
-    planCtx.strokeStyle = "#555";
-    planCtx.stroke();
     const xs = z.polygon.map((p) => p[0]), ys = z.polygon.map((p) => p[1]);
     const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
     if (z.compact) {
@@ -158,7 +155,7 @@ function drawHeatmap(counts) {
         planCtx.fillStyle = "#fff";
         planCtx.textAlign = "center";
         planCtx.textBaseline = "middle";
-        planCtx.font = "600 12px " + PLAN_FONT;   // Geist'te 400/500/600 var; "bold" (700) yok
+        planCtx.font = "600 12px " + PLAN_FONT;   // sayfada 400/500/600 var; "bold" (700) yok
         planCtx.fillText(String(n), cx, by + 1);
         planCtx.textBaseline = "alphabetic";
       }
