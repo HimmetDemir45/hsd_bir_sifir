@@ -122,7 +122,7 @@ function scheduleStats() {   // uyarı yağmurunda her seferinde değil, en fazl
 }
 
 // Sayfanın yerel fontu (web/assets, internetsiz); yüklenemezse sistem fontu
-const PLAN_FONT = '"IBM Plex Sans", system-ui, sans-serif';
+const PLAN_FONT = '"Geist", system-ui, sans-serif';
 // Font geç yüklenirse tuval ilk çizimde yedek fontla çizilmiş olur: font hazır olunca yeniden çiz
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => refreshStats());
 
@@ -158,7 +158,7 @@ function drawHeatmap(counts) {
         planCtx.fillStyle = "#fff";
         planCtx.textAlign = "center";
         planCtx.textBaseline = "middle";
-        planCtx.font = "bold 12px " + PLAN_FONT;
+        planCtx.font = "600 12px " + PLAN_FONT;   // Geist'te 400/500/600 var; "bold" (700) yok
         planCtx.fillText(String(n), cx, by + 1);
         planCtx.textBaseline = "alphabetic";
       }
@@ -166,7 +166,7 @@ function drawHeatmap(counts) {
     }
     planCtx.fillStyle = "#222";
     planCtx.textAlign = "center";
-    planCtx.font = "bold 15px " + PLAN_FONT;
+    planCtx.font = "600 15px " + PLAN_FONT;
     planCtx.fillText(z.name, cx, cy - 4);
     planCtx.font = "13px " + PLAN_FONT;
     planCtx.fillText(n + " olay", cx, cy + 14);
