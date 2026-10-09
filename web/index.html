@@ -7,10 +7,32 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <header>
-    <h1>OkulKalkan</h1>
-    <span id="conn" class="conn off">bağlantı yok</span>
-    <button id="soundBtn" class="sound off" type="button">Alarm sesi kapalı (açmak için tıkla)</button>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M16 2.5 4.5 7v8.2c0 7.1 4.8 12.6 11.5 14.3 6.7-1.7 11.5-7.2 11.5-14.3V7L16 2.5Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
+        <path d="M10 18.5h3l1.6-4 2.6 7 1.8-3h3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="brand-text">
+        <h1>OkulKalkan</h1>
+        <p class="brand-sub">Okul güvenliği erken uyarı</p>
+      </div>
+    </div>
+
+    <ul class="legend" aria-label="Uyarı seviyeleri">
+      <li class="legend-item yellow"><b>Sarı</b> kayıt</li>
+      <li class="legend-item orange"><b>Turuncu</b> ekip bildirimi</li>
+      <li class="legend-item red"><b>Kırmızı</b> insan onayı</li>
+    </ul>
+
+    <div class="topbar-status">
+      <span class="privacy" title="Kimlik tespiti yapılmaz. Yayında ve kayıtlarda yüzler bulanıklaştırılır; davranış yalnızca iskelet noktalarından analiz edilir.">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 10s2.8-5 7.5-5 7.5 5 7.5 5-2.8 5-7.5 5-7.5-5-7.5-5Z M3 17 17 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Yüz tanıma yok · yüzler bulanık
+      </span>
+      <span id="conn" class="conn off">bağlantı yok</span>
+      <button id="soundBtn" class="sound off" type="button">Alarm sesi kapalı (açmak için tıkla)</button>
+    </div>
   </header>
   <main>
     <section class="video">
