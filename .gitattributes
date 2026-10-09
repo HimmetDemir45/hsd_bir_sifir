@@ -1,0 +1,14 @@
+# Satır sonlarını herkes için aynı tut (Windows'ta gereksiz "tüm dosya değişti" çakışmalarını önler)
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# İkili dosyalar: satır sonu dönüştürme ve diff yok
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.mp4 binary
+*.wav binary
+*.pt binary
+*.tflite binary
+*.db binary
