@@ -58,6 +58,7 @@ def camera_loop(cfg: dict, cam_cfg: dict, source: str, events: "queue.Queue[Even
     pose_holder[zone_id] = pose
     camera = Camera(source, loop_file=True)
     min_dt = 1.0 / cfg["general"]["target_fps"]
+    n_frames, fps_t0 = 0, time.time()
     try:
         while not stop.is_set():
             t0 = time.time()
@@ -78,6 +79,10 @@ def camera_loop(cfg: dict, cam_cfg: dict, source: str, events: "queue.Queue[Even
             if ok:
                 frames.set(cam_id, buf.tobytes())
             dt = time.time() - t0
+            n_frames += 1
+            if t0 - fps_t0 >= 10.0:  # işleme hızı: düşükse hız/süre kuralları (kavga vb.) kaçırılabilir
+                print(f"[camera] işleme hızı: {n_frames / (t0 - fps_t0):.1f} FPS", flush=True)
+                n_frames, fps_t0 = 0, t0
             if dt < min_dt and not camera.is_file:
                 time.sleep(min_dt - dt)
     finally:
