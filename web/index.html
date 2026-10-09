@@ -57,6 +57,13 @@
         <span class="live-chip">Canlı · Kamera 1</span>
         <span class="blur-chip">Yüzler bulanık</span>
       </div>
+      <!-- Ortam ses seviyesi: app.js /api/level ile doldurur; ses dedektörü yoksa (demo) gizli kalır.
+           --db-threshold: eşik konumu, data-over="1": eşik üstü -->
+      <div id="dbMeter" class="db-meter" role="meter" aria-label="Ortam ses seviyesi" hidden>
+        <span class="db-label">Ses</span>
+        <span class="db-track"><i id="dbFill"></i></span>
+        <span id="dbValue" class="db-value"></span>
+      </div>
     </section>
 
     <section class="tile feed">
@@ -103,6 +110,8 @@
         <thead><tr><th scope="col">Bölge</th><th scope="col" class="y">Sarı</th><th scope="col" class="o">Turuncu</th><th scope="col" class="r">Kırmızı</th></tr></thead>
         <tbody></tbody>
       </table>
+      <!-- app.js doldurur: "Yanlış alarm: x / y karar verilen uyarı"; karar yoksa gizli -->
+      <p id="falseAlarm" class="panel-note" hidden></p>
     </section>
   </main>
 
