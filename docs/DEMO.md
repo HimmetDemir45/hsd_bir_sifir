@@ -11,6 +11,8 @@ python main.py --fresh --source test_media/veri_demo.mp4
 `test_media/veri_demo.mp4` (69 sn, `python -m tools.veri_demo` ile üretilir, git'te yok -> kopyalayın):
 eğitimde **hiç görülmemiş** 6 normal + 6 kavga güvenlik kamerası klibi, sonra silah veri setinin TEST
 bölümünden 4 tabanca + 3 bıçak görüntüsü. Her parçanın üstünde gerçek etiket yazar.
+Her parça okulun farklı bir bölgesinde oynar (`test_media/veri_demo.zones.json`, parça başlığında `[bolge]`):
+uyarılar kat planında koridor, bahçe, kantin, sınıf, WC... üzerine dağılır.
 Beklenen: normal kliplerde uyarı yok, kavgada 🟠 "Kavga şüphesi" (ekranda `kavga_p` olasılığı), tabanca/bıçakta
 🔴 kırmızı modal. Aynı tip olaylar 30 sn içinde tek kartta birleşir (fusion dedup) — kart sayısı değil, kartın
 gelmesi ve `kavga_p` önemli. Anlatırken `docs/DEGERLENDIRME.md` ÖZET tablosunu ve `docs/gorseller/` grafiklerini
@@ -70,6 +72,10 @@ python main.py --fresh --audio
 5. **Bıçak / tabanca (webcam):** `python -m detectors.weapon` (pose komutu silaha bakmaz). Gerçek **mutfak bıçağını**
    kameraya yan tutun; **maket bıçağı tanınmıyor** (canlı kayıtta güven 0.00). Kendi modelimiz (`ml/silah_v2.pt`,
    eşik 0.6) net görüntüde çalışıyor; fotoğraf testinde 4/11. Silahı en güvenilir şekilde **silah sesiyle** gösterin.
+5b. **Bağırma (mikrofondan):** `python -m detectors.audio_cls` açıkken mikrofona 1-2 sn yüksek sesle bağırın.
+   İki yol var: model `shout` skoru ≥ 0.3 ya da ses seviyesi eşiği (ders saatinde kantin 75 dB, teneffüste 90)
+   1 sn aşılırsa `shout` event'i → 🟡 sarı. Konsoldaki dB değerine bakın; ses dosyasında dB kuralı kapalı
+   (`db_rule_on_files: false`), bu yüzden bağırma testi mikrofonla yapılır. demo_ses.wav'daki bağırma 0.16 aldı (eşik altı).
 6. **Kavga / düşme / koşma:** canli.mp4 kaydıyla ayarlandı (docs/DEGERLENDIRME.md). Kavga için kollar hızlı ve
    yakın olun; düşmede kendinizi **birden** bırakıp en az **2 sn** yerde kalın (yavaşça uzanmak düşme sayılmaz).
 7. **Yanlış alarm:** kamera önünde 2 dk normal oturun/konuşun/yürüyün → kavga/düşme uyarısı gelmemeli.

@@ -70,6 +70,14 @@ class WeaponDetector:
         self._evaluated: set[str] | None = None          # None: update() doğrudan çağrıldı (testler) -> tüm tipler
         self._last_by_model: dict[int, list[Detection]] = {}
 
+    def set_zone(self, zone_id: str) -> None:
+        """Kaynağın bölgesi değişti (demo videosunda parça başına bölge): yeni bölgede ilk tespit beklemeden basılsın."""
+        if zone_id != self.zone_id:
+            self.zone_id = zone_id
+            for t in self.history:
+                self.history[t].clear()
+                self.last_emit[t] = -1e9
+
     def _load_models(self) -> list[tuple[YOLO, dict[int, str]]]:
         loaded = []
         for spec in self.cfg["models"]:

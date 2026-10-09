@@ -22,6 +22,22 @@ Gerçek dünya (eğitimde hiç kullanılmadı): Kavga.mp4 arbede pencerelerinin 
 Ekip kaydı canli.mp4 (kameraya çok yakın, sahnelenmiş): boğuşma %17, itişme %2 pencere — veri setinden
 çok farklı ortamda genelleme zayıf (bilinen sınır).
 
+### Modele ek "hızlı temas" kuralı (yumruk/itme)
+Model uzak güvenlik kamerasıyla eğitildi; yakın kamerada (ekip kaydı canli.mp4) yumruğu kaçırıyordu. Kaçan
+pencerelerde iki sinyal belirgindi: bilek karşı kişinin kutusunda (`wrist_d` ~0.04 boy) ve kol hızlı (~2.5 boy/sn).
+Kural: ikisi AYNI karede, 3 sn içinde 2 pencerede -> kavga (model VEYA kural). `config.yaml pose.fight_model.strike`.
+
+| ölçüm | yalnız model | model + temas |
+|---|---|---|
+| canli.mp4 itişme/vurma (kavga işaretli kare) | 8 | **287** |
+| canli.mp4 iterek düşürme | 0 | **44** |
+| canli.mp4 bıçak gösterme / kendi düşme (normal) | 0 / 0 | 0 / 0 |
+| veri_demo kavga klipleri (6) | 2-3 | **6** (CPU'da tam hat: 4) |
+| veri_demo normal klipler (6) | 0 | 0 |
+
+Görülmemiş normal kliplerde kuralın tek başına yanlış alarmı: Surveillance %2, Movies %0, RLVS %18 (kalabalık
+spor/sarılma sahneleri — bilinen sınır). Ayar taraması ve gerekçe config yorumunda.
+
 ### Silah modeli (YOLO11n, kendi eğitimimiz)
 - **Veri:** Dangerous Items (Zenodo 16422779, CC BY 4.0): 5934 eğitim / 1272 doğrulama / 1272 test görüntüsü,
   5 sınıf. GPU (RTX 4060) 40 tur, ~40 dk. `tools/silah_egit.py` -> v1.

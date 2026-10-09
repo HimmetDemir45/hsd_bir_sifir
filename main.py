@@ -62,12 +62,17 @@ def camera_loop(cfg: dict, cam_cfg: dict, source: str, events: "queue.Queue[Even
     from detectors.pose import PoseDetector
     from detectors.weapon import WeaponDetector
     from sources.camera import Camera
+    from sources.zone_timeline import ZoneTimeline
 
     cam_id, zone_id = cam_cfg["id"], cam_cfg["zone_id"]
     weapon = WeaponDetector(cfg, cam_id, zone_id, events)
     pose = PoseDetector(cfg, cam_id, zone_id, events)
     pose_holder[zone_id] = pose
     camera = Camera(source, loop_file=True)
+    # Demo videosu: <video>.zones.json varsa parçalar farklı bölgelerde (A: sources/zone_timeline.py)
+    zones = ZoneTimeline.for_source(source, cfg["zones"]) if camera.is_file else None
+    if zones:
+        print(f"[camera] bölge zaman çizelgesi: {sorted(set(zones.zones))}")
     min_dt = 1.0 / cfg["general"]["target_fps"]
     max_side = int(cfg["general"].get("max_frame_side", 0))
     n_frames, fps_t0 = 0, time.time()
@@ -80,6 +85,13 @@ def camera_loop(cfg: dict, cam_cfg: dict, source: str, events: "queue.Queue[Even
                 print("[camera] kare gelmiyor, tekrar deneniyor...")
                 time.sleep(0.5)
                 continue
+            if zones:
+                zone = zones.zone_at(camera.position, cam_cfg["zone_id"])
+                if zone != pose.zone_id:
+                    weapon.set_zone(zone)
+                    pose.set_zone(zone)
+                    pose_holder.clear()
+                    pose_holder[zone] = pose
             frame = shrink(frame, max_side)  # tüm aşamalar (silah, poz, bulanıklaştırma, klip, JPEG) küçük karede
             w_dets, _ = weapon.process(frame, camera.last_ts)
             tracks, _ = pose.process(frame, camera.last_ts)
@@ -241,7 +253,7 @@ def main() -> None:
         print(f"[ALERT {alert.level.upper()}] {alert.zone_id}: {'; '.join(alert.reasons)}", flush=True)
 
     def crowd() -> dict[str, int]:
-        return {z: p.status.crowd_size for z, p in pose_holder.items()}
+        return {z: p.status.crowd_size for z, p in list(pose_holder.items())}  # kamera thread'i bölge değiştirebilir
 
     engine = FusionEngine(cfg, events, on_alert, crowd_size_by_zone=crowd, on_event=storage.save_event)
 

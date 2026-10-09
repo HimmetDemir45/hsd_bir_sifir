@@ -46,6 +46,7 @@ class Camera:
 
         self.last_ts: float = time.time()
         self._file_start: float | None = None  # dosyanın 0. saniyesine karşılık gelen duvar saati
+        self.position: float = 0.0  # dosyada son okunan karenin video saniyesi (canlı kaynakta 0)
         self._frame: np.ndarray | None = None
         self._frame_ts = 0.0
         self._lock = threading.Lock()
@@ -125,6 +126,7 @@ class Camera:
             wait = self._file_start + pos - time.time()
             if wait > 0:
                 time.sleep(wait)
+        self.position = pos
         self.last_ts = self._file_start + pos
         return frame
 

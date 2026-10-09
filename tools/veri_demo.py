@@ -5,6 +5,7 @@
 
 Her parçanın üstünde gerçek etiket yazar (jüri doğruyu ekranda görür). Parçalar arası 1 sn siyah: model iki klibi
 karıştırmasın. Silah görüntüleri veri setinin TEST bölümünden (eğitimde ve erken durdurmada kullanılmadı).
+Her parça okulun farklı bir bölgesinde gibi: <out>.zones.json (main.py okur), olaylar kat planına dağılır.
 """
 from __future__ import annotations
 
@@ -17,6 +18,10 @@ import cv2
 import numpy as np
 
 W, H, FPS = 960, 720, 15
+# Parça sırasıyla bölgeler (config.yaml zones): normal x3, kavga x3, normal x3, kavga x3, tabanca x4, bıçak x3
+ZONES = ["koridor_1", "bahce", "spor_salonu", "koridor_1", "bahce", "wc",
+         "kantin", "sinif_1a", "koridor_1", "spor_salonu", "kantin", "sinif_1b",
+         "bahce", "koridor_1", "kantin", "spor_salonu", "kantin", "sinif_1a", "wc"]
 
 
 def fit(frame: np.ndarray) -> np.ndarray:
@@ -67,16 +72,19 @@ def main() -> None:
     root = Path(args.fight_root)
     writer = cv2.VideoWriter(args.out, cv2.VideoWriter_fourcc(*"mp4v"), FPS, (W, H))
     black = np.zeros((H, W, 3), np.uint8)
-    timeline = []
+    timeline, zone_starts = [], []
     t = 0.0
 
     def put(frames, text, color, label):
         nonlocal t
         start = t
+        zone = ZONES[len(timeline) % len(ZONES)]
+        zone_starts.append((round(start, 2), zone))
+        text = f"[{zone}] {text}"
         for f in frames:
             writer.write(caption(fit(f), text, color))
             t += 1 / FPS
-        timeline.append((round(start, 1), round(t, 1), label))
+        timeline.append((round(start, 1), round(t, 1), f"{label} @{zone}"))
         for _ in range(FPS):          # 1 sn siyah ayraç
             writer.write(black)
             t += 1 / FPS
@@ -104,6 +112,7 @@ def main() -> None:
             put([frame] * int(args.image_s * FPS), f"VERI SETI TEST GORUNTUSU | Gercek: {label}", (80, 80, 255),
                 f"{label.lower()} {img.name}")
     writer.release()
+    Path(args.out).with_suffix(".zones.json").write_text(json.dumps(zone_starts), encoding="utf-8")
     Path(args.out).with_suffix(".json").write_text(json.dumps(timeline, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"{args.out}: {t:.1f} sn, {len(timeline)} parça")
     for a, b, lab in timeline:

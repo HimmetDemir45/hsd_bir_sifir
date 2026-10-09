@@ -128,6 +128,14 @@ class PoseDetector:
         self._fight_eval_last = -1e9
         self._fight_hits = 0
         self.fight_prob = 0.0
+        self._strike_times: deque[float] = deque()   # "hızlı temas" kuralını geçen pencerelerin zamanları
+        self.strike_on = False
+
+    def set_zone(self, zone_id: str) -> None:
+        """Kaynağın bölgesi değişti (demo videosunda parça başına bölge): başka kamera gibi sıfırdan başla."""
+        if zone_id != self.zone_id:
+            self.zone_id = zone_id
+            self.reset()
 
     def _load_fight_model(self):
         """config pose.fight_model: veri setleriyle eğitilmiş kavga sınıflandırıcısı (tools/kavga_egit.py).
@@ -139,18 +147,25 @@ class PoseDetector:
         if not path.is_file():
             print(f"[pose] UYARI: {path.name} yok -> kavga için kural kullanılıyor")
             return None, None
-        import joblib   # scikit-learn ile gelir; sadece model açıkken gerekir
+        try:
+            import joblib   # scikit-learn ile gelir; sadece model açıkken gerekir
 
-        bundle = joblib.load(path)
-        meta = bundle["meta"]
+            bundle = joblib.load(path)
+            meta = bundle["meta"]
+        except Exception as e:  # sklearn yok / sürüm uyumsuz: kamera hattını durdurma, kurala dön
+            print(f"[pose] UYARI: kavga modeli yüklenemedi ({e!r}) -> kavga için kural kullanılıyor")
+            return None, None
         print(f"[pose] kavga modeli: {meta['model']} (CV AUC {meta['cv'].get('auc')}, {meta['n_clips']} klip, "
               f"eşik {fm.get('threshold') or meta['threshold']})")
         return bundle["model"], meta
 
     def _fight_by_model(self, tracks: list[Track], now: float) -> tuple[set[int], float]:
         """Son window_s saniyenin iskeletlerinden kavga olasılığı (eğitimle AYNI özellik kodu: ml.pose_features).
-        Olasılık art arda min_consecutive değerlendirmede eşiği geçerse kavga."""
-        from ml.pose_features import window_features
+        Olasılık art arda min_consecutive değerlendirmede eşiği geçerse kavga.
+        Ek olarak "hızlı temas" kuralı (strike): bilek karşı kişinin kutusunda + kol hızlı, aynı karede; span_s içinde
+        min_windows pencerede görülürse kavga. Model uzak güvenlik kamerasıyla eğitildi, yakın kamerada yumruğu
+        kaçırıyordu (canli.mp4 itişme/vurma: model %2, kural %65 pencere; normal bölümlerde 0)."""
+        from ml.pose_features import frame_signals, window_features
 
         fm, meta = self.cfg["fight_model"], self.fight_meta
         self._fight_buf.append((now, [(t.id, t.person.kps, t.person.kpc, t.person.box)
@@ -163,7 +178,15 @@ class PoseDetector:
             self.fight_prob = float(self.fight_model.predict_proba(feats)[0, 1])
             thr = fm.get("threshold") or meta["threshold"]
             self._fight_hits = self._fight_hits + 1 if self.fight_prob >= thr else 0
-        if self._fight_hits >= fm["min_consecutive"]:
+            st = fm.get("strike", {})
+            if st.get("enabled", False):
+                if any(f["wrist_d"] <= st["wrist_d"] and f["limb_max"] >= st["limb_speed"]
+                       for f in frame_signals(list(self._fight_buf))[1:]):
+                    self._strike_times.append(now)
+                while self._strike_times and self._strike_times[0] < now - st["span_s"]:
+                    self._strike_times.popleft()
+                self.strike_on = len(self._strike_times) >= st["min_windows"]
+        if self._fight_hits >= fm["min_consecutive"] or self.strike_on:
             # karar pencerenin tamamına dayanır: bu karede iskelet kaybolmuş olsa bile kavga bildirilir
             # (eskiden kimlik listesi boşsa event basılmıyordu; demo klibinde p=0.96 iken kaçtı)
             return {t.id for t in tracks} or {-1}, self.fight_prob
@@ -410,7 +433,7 @@ class PoseDetector:
             cv2.putText(frame, label, (x1, max(15, y1 - 6)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 1, cv2.LINE_AA)
         info = f"kisi={len(tracks)} kume={st.crowd_size} kosan={st.running_count}"
         if self.fight_model is not None:
-            info += f" kavga_p={self.fight_prob:.2f}"
+            info += f" kavga_p={self.fight_prob:.2f}" + (" TEMAS" if self.strike_on else "")
         cv2.putText(frame, info, (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
         return frame
 

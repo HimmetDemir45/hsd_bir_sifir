@@ -127,6 +127,27 @@ class FakeFightModel:
         return np.array([[1 - self.p, self.p]] * len(X))
 
 
+@pytest.mark.parametrize("bad", ["corrupt", "no_sklearn"])
+def test_fight_model_load_failure_falls_back_to_rule(cfg, monkeypatch, tmp_path, bad):
+    """Model açılamazsa (bozuk/uyumsuz dosya ya da scikit-learn yok) detektör çökmez, kurala döner."""
+    import builtins
+
+    monkeypatch.setattr(pose_mod, "YOLO", DummyYOLO)
+    model_file = tmp_path / "kavga.joblib"
+    model_file.write_bytes(b"bozuk pickle degil")
+    cfg["pose"]["fight_model"].update(enabled=True, path=str(model_file))
+    if bad == "no_sklearn":
+        real_import = builtins.__import__
+
+        def fake_import(name, *a, **k):
+            if name == "joblib":
+                raise ModuleNotFoundError("No module named 'joblib'")
+            return real_import(name, *a, **k)
+        monkeypatch.setattr(builtins, "__import__", fake_import)
+    det = PoseDetector(cfg, "cam1", "kantin")
+    assert det.fight_model is None and det.fight_meta is None
+
+
 def test_fight_model_needs_consecutive_windows(pose_det):
     pose_det.fight_meta = {"window_s": 1.5, "threshold": 0.8}
     pose_det.cfg["fight_model"] = {"threshold": None, "eval_every_s": 0.5, "min_consecutive": 2}
@@ -137,6 +158,19 @@ def test_fight_model_needs_consecutive_windows(pose_det):
     pose_det.fight_model = FakeFightModel(0.95)         # eşik üstü, art arda 2 değerlendirme -> kavga
     fights = [t for t, typ in run_pose(pose_det, calm) if typ == "fight"]
     assert fights and fights[0] >= 0.5, "tek değerlendirme yetmemeli (min_consecutive)"
+
+
+def test_fight_strike_rule_catches_punch_model_misses(pose_det, cfg):
+    """Model kaçırsa da (p=0) bilek karşı kişiye hızla değiyorsa kavga; temassız hızlı el sallama kavga değil."""
+    pose_det.fight_meta = {"window_s": 1.5, "threshold": 0.9}
+    pose_det.cfg["fight_model"] = dict(cfg["pose"]["fight_model"], threshold=None, eval_every_s=0.5, min_consecutive=1)
+    pose_det.fight_model = FakeFightModel(0.0)
+    # B'nin kutusu x 210-290; A'nın bileği 130'dan 230'a gidip geliyor (0.2 sn'de 100 px = 2.5 boy/sn)
+    punch = [[person(100, 300, wrist=(100 * (i % 2), 0)), person(250, 300)] for i in range(25)]
+    assert "fight" in [typ for _, typ in run_pose(pose_det, punch)]
+    pose_det.reset()
+    wave = [[person(100, 300, wrist=(-100 * (i % 2), 0)), person(250, 300)] for i in range(25)]   # aynı hız, temas yok
+    assert "fight" not in [typ for _, typ in run_pose(pose_det, wave)]
 
 
 def test_slow_lying_down_is_not_fall(pose_det):
@@ -344,3 +378,27 @@ def test_clip_without_frames_in_window_raises(tmp_path):
     buf.add(np.zeros((120, 160, 3), np.uint8), 2000.0)   # olaydan çok sonra: pencerede kare yok
     with pytest.raises(RuntimeError):
         buf.save(str(tmp_path / "bos.mp4"), event_ts=1000.0)
+
+
+def test_zone_timeline_and_detector_zone_switch(cfg, tmp_path, pose_det):
+    """Demo videosu: <video>.zones.json ile parça başına bölge; bölge değişince detektör yeni bölgeden basar."""
+    import json
+
+    from sources.zone_timeline import ZoneTimeline
+
+    video = tmp_path / "demo.mp4"
+    video.write_bytes(b"")
+    video.with_suffix(".zones.json").write_text(json.dumps([[0.0, "koridor_1"], [5.0, "bahce"]]))
+    tl = ZoneTimeline.for_source(str(video), cfg["zones"])
+    assert tl.zone_at(0.0, "kantin") == "koridor_1"
+    assert tl.zone_at(4.99, "kantin") == "koridor_1"
+    assert tl.zone_at(7.0, "kantin") == "bahce"
+    assert ZoneTimeline.for_source(str(tmp_path / "yok.mp4"), cfg["zones"]) is None
+
+    video.with_suffix(".zones.json").write_text(json.dumps([[0.0, "uydurma_bolge"]]))
+    with pytest.raises(ValueError):
+        ZoneTimeline.for_source(str(video), cfg["zones"])
+
+    pose_det._last_emit["fight"] = 100.0           # eski bölgede yeni basılmış
+    pose_det.set_zone("bahce")
+    assert pose_det.zone_id == "bahce" and pose_det._last_emit == {}   # yeni bölgede bekleme yok
