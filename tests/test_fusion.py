@@ -28,8 +28,9 @@ def test_red_weapon_threshold(cfg):
 
 
 def test_red_gunshot_threshold(cfg):
-    assert classify(ev("gunshot", 0.5, source="audio"), cfg)[0] == "red"
-    assert classify(ev("gunshot", 0.49, source="audio"), cfg) is None
+    th = cfg["alerts"]["red"]["gunshot_min_conf"]  # config'den: eşik ayarlanınca test bozulmasın
+    assert classify(ev("gunshot", th, source="audio"), cfg)[0] == "red"
+    assert classify(ev("gunshot", round(th - 0.01, 2), source="audio"), cfg) is None
 
 
 def test_scream_depends_on_crowd(cfg):
