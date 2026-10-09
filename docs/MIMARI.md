@@ -54,6 +54,24 @@ OkulKalkan, okul kameralarından ve mikrofonundan gelen görüntü + sesi analiz
 - İnternet yoksa Telegram hatası loglanır, pipeline durmaz. Kamera kopunca yeniden açılır.
 - `python main.py --demo` sahte olay senaryosunu oynatır; model veya kamera gerekmez (yedek demo).
 
+## Sınırlar ve gelecek iş
+**Şu an:** davranış tespiti (kavga, düşme, koşuşma) **kural tabanlı**: iskelet keypoint'leri + kayan zaman pencereleri
+(hız, süre, yakınlık eşikleri). Bilerek böyle seçildi: CPU laptopta gerçek zamanlı, her uyarının gerekçesi gösterilebiliyor
+("Kavga şüphesi"), eşikler `config.yaml`'dan ayarlanıyor. Derin bir zaman serisi modeli kullanmıyoruz.
+
+**Ölçülen sınır** ([DEGERLENDIRME.md](DEGERLENDIRME.md), dış veri seti, okul ortamı değil): kavga yakalama %12, yanlış alarm
+%3 (2–3 sn'lik kısa kliplerde; uzun süren kavgada kural çalışıyor). Kural kısa itişmeleri kaçırıyor. Bu rakamlar mutlak doğruluk
+değil, gösterge.
+
+**Gelecek iş (yapılmadı):**
+1. **Öğrenilmiş iskelet dizisi sınıflandırıcısı:** mevcut poz çıktısının zaman penceresini (≈30 kare) hafif bir GRU / 1B-CNN
+   ile sınıflandırmak. Aynı `fight` event'ini üretir, fusion/API/dashboard değişmez; kuralla birlikte (VE/VEYA) çalışır ve
+   model yoksa kurala düşer. Önkoşul: daha fazla etiketli kavga verisi (sınıf kamerası açıları), klip bazlı doğrulama, ölçümde
+   kuralı geçmesi.
+2. Çoklu kamera (kamera başına bulanıklaştırma durumu ve klip tamponu gerekir).
+3. Telegram'dan onay (satır içi butonlar, yalnızca yetkili sohbet), okul bilgi sistemiyle entegrasyon.
+4. Daha fazla ortamda kalibrasyon ve ölçüm (eşikler gerçek bir okulda ayarlanmalı).
+
 ## Ayrıca bakın
 [DEMO.md](DEMO.md) (demo rehberi ve bilinen sınırlar) · [DEGERLENDIRME.md](DEGERLENDIRME.md) (veri setiyle yakalama / yanlış
 alarm oranları) · [../CLAUDE.md](../CLAUDE.md) (ilkeler ve kurallar).
