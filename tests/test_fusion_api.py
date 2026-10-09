@@ -55,6 +55,24 @@ def test_only_red_confirmation_sends_112_message():
     assert notifier.confirmations == [red.id]              # kırmızı: gider
 
 
+def test_level_endpoint_unavailable_without_audio_and_returns_values_with_it():
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+
+    from api.server import FrameStore, Hub, create_app
+
+    cfg = load_config()
+    none = TestClient(create_app(cfg, Storage(":memory:"), FrameStore(), Hub()))
+    assert none.get("/api/level").json() == {"available": False}
+
+    off = TestClient(create_app(cfg, Storage(":memory:"), FrameStore(), Hub(), level_source=lambda: None))
+    assert off.get("/api/level").json() == {"available": False}   # ses dedektörü henüz yok
+
+    data = {"db": 61.5, "threshold": 75.0, "scores": {"scream": 0.1}}
+    on = TestClient(create_app(cfg, Storage(":memory:"), FrameStore(), Hub(), level_source=lambda: data))
+    assert on.get("/api/level").json() == {"available": True, **data}
+
+
 def test_false_alarm_endpoint():
     client, db, _ = make_client()
     al = Alert(level="yellow", reasons=["x"], zone_id="kantin")

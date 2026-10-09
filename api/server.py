@@ -70,7 +70,8 @@ def _placeholder_jpeg(text: str) -> bytes:
 
 
 def create_app(cfg: dict[str, Any], storage: Storage, frames: FrameStore, hub: Hub,
-               notifier: Any | None = None, demo_reset: Callable[[], None] | None = None) -> FastAPI:
+               notifier: Any | None = None, demo_reset: Callable[[], None] | None = None,
+               level_source: Callable[[], dict | None] | None = None) -> FastAPI:
     app = FastAPI(title="OkulKalkan")
     waiting = _placeholder_jpeg("Kamera bekleniyor...")
 
@@ -97,6 +98,12 @@ def create_app(cfg: dict[str, Any], storage: Storage, frames: FrameStore, hub: H
     @app.get("/api/status")
     def status() -> dict:
         return {"demo": demo_reset is not None}
+
+    @app.get("/api/level")
+    def level() -> dict:
+        """Canlı ses seviyesi. Ses dedektörü yoksa (--demo, --audio verilmedi) available=false."""
+        data = level_source() if level_source else None
+        return {"available": False} if data is None else {"available": True, **data}
 
     @app.post("/api/demo/reset")
     def reset_demo() -> dict:

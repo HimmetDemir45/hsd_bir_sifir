@@ -368,6 +368,32 @@ async function setupDemoMode() {
   });
 }
 
+// ---------- Canlı ses seviyesi (dB) ----------
+// Eleman C'nin index.html'inde: <div id="dbMeter" hidden><span id="dbValue"></span><i id="dbFill"></i></div>
+// Yoksa atlanır. Sunucu ses dedektörü çalışmıyorsa (--demo) /api/level available=false döner, eleman gizli kalır.
+const DB_MIN = 30, DB_MAX = 100;   // çubuğun gösterdiği aralık (dB)
+function dbPercent(db) { return Math.max(0, Math.min(1, (db - DB_MIN) / (DB_MAX - DB_MIN))) * 100; }
+
+function setupLevelMeter() {
+  const meter = document.getElementById("dbMeter");
+  if (!meter) return;
+  const value = document.getElementById("dbValue");
+  const fill = document.getElementById("dbFill");
+  async function tick() {
+    try {
+      const lv = await (await fetch("/api/level")).json();
+      meter.hidden = !lv.available;
+      if (!lv.available) return;
+      if (value) value.textContent = Math.round(lv.db) + " dB";
+      if (fill) fill.style.width = dbPercent(lv.db) + "%";
+      if (lv.threshold != null) meter.style.setProperty("--db-threshold", dbPercent(lv.threshold) + "%");
+      meter.dataset.over = lv.threshold != null && lv.db >= lv.threshold ? "1" : "0";  // CSS: eşik üstü vurgusu
+    } catch (e) { /* sunucu yanıt vermiyorsa son değer kalır */ }
+  }
+  tick();
+  setInterval(tick, 500);
+}
+
 // Uyarı listesini sunucudan çekip birleştirir. İlk yüklemede ve HER WebSocket bağlantısında çağrılır:
 // liste çekildikten sonra WebSocket açılana kadar (veya bağlantı koptuğu sürede) gelen uyarılar kaybolmasın.
 async function syncAlerts() {
@@ -417,3 +443,4 @@ function connect() {
 
 loadInitial().then(connect);
 setupDemoMode();
+setupLevelMeter();
