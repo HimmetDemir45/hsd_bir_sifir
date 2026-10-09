@@ -206,7 +206,13 @@ section { background: var(--panel); border: 1px solid var(--line); border-radius
    Kartı JS üretir: li.alert.<seviye>[.fresh] > .top(.lvl, saat) + ul(sebepler) + a.clip-link? + .status
    Seviye: renk + şekil (sarı daire, turuncu üçgen, kırmızı sekizgen) + metin. Görsel ağırlık seviyeyle artar.
    data-status (pending/confirmed/dismissed) JS'ten gelince durum kuralları kendiliğinden devreye girer. */
-#count { font-variant-numeric: tabular-nums; color: var(--faint); }
+/* Sayaç rozeti (metni JS yazar; B parantezleri kaldırınca sade sayı olur) */
+.count-badge {
+  display: inline-block; min-width: 1.6rem; margin-left: 0.35rem; padding: 0.05rem 0.45rem;
+  font-size: var(--fs-xs); font-weight: 700; line-height: 1.5; text-align: center; vertical-align: 0.1em;
+  font-variant-numeric: tabular-nums; color: var(--text); background: var(--raised-hi); border-radius: 999px;
+}
+.count-badge:empty { display: none; }
 #alerts:empty::before {
   content: "Şu an uyarı yok\A Sistem izliyor. Yeni uyarılar burada anında görünür.";
   white-space: pre-line; display: block; padding: 2.5rem 1rem; text-align: center;
@@ -281,6 +287,7 @@ section { background: var(--panel); border: 1px solid var(--line); border-radius
 .panel-head h2 { margin: 0; }
 .panel-meta { font-size: var(--fs-xs); color: var(--muted); }
 .panel-note { margin: 0.6rem 0 0; font-size: var(--fs-xs); color: var(--muted); }
+.panel-note strong, .panel-meta strong { font-weight: 600; color: var(--text); }
 
 /* Isı ölçeği: app.js'teki dolgu ile aynı (hsl 55 → 0, opaklık 0.25 → 0.8), planın kağıt rengi üstünde */
 .heat-legend { display: flex; align-items: center; gap: 0.45rem; font-size: var(--fs-xs); color: var(--muted); }
@@ -365,6 +372,8 @@ section { background: var(--panel); border: 1px solid var(--line); border-radius
   color: var(--red-ink); text-transform: uppercase; letter-spacing: 0.01em;
 }
 .modal-zone { margin: 0.3rem 0 0; font-size: clamp(var(--fs-xl), 2.2vw, 2.4rem); font-weight: 600; line-height: 1.2; color: var(--text); }
+.modal-time { margin: 0.2rem 0 0; font-size: var(--fs-lg); font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.modal-time:has(#redTime:empty) { display: none; }   /* B saati doldurana kadar görünmez */
 .modal-zone-label { font-size: var(--fs-sm); font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-right: 0.25rem; }
 
 .modal-reasons { margin: 0; padding: 0.85rem 1rem; list-style: none; display: grid; gap: 0.4rem;
