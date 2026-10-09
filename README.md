@@ -21,6 +21,16 @@ Model dosyaları `models/` klasörüne konur (git'e eklenmez):
 python -m detectors.weapon                              # webcam
 python -m detectors.weapon --source test_media/x.mp4    # video dosyası
 python -m detectors.pose                                # kavga / düşme / koşuşma
+python -m detectors.audio_cls                           # mikrofon: çığlık / bağırma / silah sesi / cam + dB
+python -m detectors.audio_cls --audio test_media/x.wav  # ses dosyası
+python -m detectors.audio_cls --list-devices            # mikrofon numaraları (config: audio.input)
+```
+
+Ses modeli: [EfficientAT](https://github.com/fschmid56/EfficientAT) `mn10_as` (MIT, `detectors/third_party/efficientat/`),
+yedek olarak MediaPipe + YAMNet (`models/yamnet.tflite`). Ağırlıklar ilk çalıştırmada `models/` altına iner;
+YAMNet'i elle indirin:
+```bash
+curl -L -o models/yamnet.tflite https://storage.googleapis.com/mediapipe-models/audio_classifier/yamnet/float32/1/yamnet.tflite
 ```
 
 Çıkmak için pencerede `q`. Tespit edilen olaylar konsola JSON olarak basılır.

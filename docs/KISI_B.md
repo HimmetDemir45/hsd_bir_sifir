@@ -63,8 +63,17 @@ from detectors.pose import PoseDetector           # PoseDetector(cfg, camera_id,
 # ikisi de: dets, events = det.process(frame, camera.last_ts); det.draw(frame, dets)  -> overlay
 # PoseDetector.status.crowd_size -> en kalabalık kümedeki kişi sayısı
 ```
+```python
+from detectors.audio_cls import AudioDetector     # HAZIR
+# det = AudioDetector(cfg, zone_id=None, out_queue=q)   # zone_id/device_id verilmezse config audio.zone_id / device_id
+# threading.Thread(target=det.run, args=(stop_event,), kwargs={"source": args.audio}, daemon=True).start()
+#   source None -> config audio.input (mikrofon); wav yolu verilirse gerçek zamanlı oynatır, bitince döner
+# det.last_db: float (dashboard ses seviyesi), det.last_scores: {"scream","shout","gunshot","glass"} -> 0..1
+```
+- Ses event'leri: `scream`, `shout`, `gunshot`, `glass`. dB eşiği aşımı da `shout` olarak gelir (confidence 0.5–1.0).
+- Ses event'lerinde `camera_id` = config `audio.device_id` (`mic1`).
+
 A'nın yapacakları (henüz yok, gelene kadar sahte veri kullan):
-- `detectors/audio_cls.py`: `AudioDetector(cfg, zone_id, out_queue)`, `.run(stop_event: threading.Event)` (thread'de çalışır), `.last_db: float` (dashboard'da ses seviyesi için).
 - `privacy/blur.py`: `blur_faces(frame) -> frame`. Dashboard yayınından ve kayıttan **önce** çağır.
 - `sources/clip_buffer.py`: `ClipBuffer(seconds)`, `.add(frame, ts)`, `.save(path) -> str` (son N sn'yi mp4 yazar, kareler zaten bulanık). Turuncu/kırmızı uyarıda sen çağırırsın.
 

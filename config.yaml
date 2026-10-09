@@ -77,18 +77,39 @@ pose:
     radius_ratio: 1.5          # kişi boyu cinsinden kümelenme yarıçapı
 
 audio:
-  model: models/yamnet.tflite
-  sample_rate: 16000
-  window_s: 0.975
-  # YAMNet sınıf adı -> event tipi
+  backend: efficientat   # efficientat (daha isabetli) | yamnet (yedek). efficientat yüklenemezse otomatik yamnet.
+  input: default         # mikrofon: default veya cihaz numarası (python -m detectors.audio_cls --list-devices)
+  device_id: mic1        # Event.camera_id alanına yazılır
+  zone_id: kantin
+  window_s: 1.0          # model her seferinde son 1 sn'yi dinler
+  hop_s: 0.5             # ...yarım saniyede bir
+  emit_cooldown_s: 3.0   # aynı tip event'i detektör bu sıklıktan fazla basmaz
+  efficientat:
+    model_name: mn10_as  # CPU zayıfsa: mn05_as / mn04_as (daha küçük, biraz daha az isabetli)
+    sample_rate: 32000
+    pad_to_s: 10         # model 10 sn kliplerle eğitildi; <3 sn girişte bozuk skor veriyor -> pencere sıfırla 10 sn'ye tamamlanır
+  yamnet:
+    model: models/yamnet.tflite
+    sample_rate: 16000
+  # AudioSet sınıf adı -> event tipi (iki model de AudioSet etiketlerini kullanır)
+  # Bilerek dışarıda: "Glass" (kantinde bardak tıkırtısı), "Children shouting" (teneffüste sürekli), "Cap gun"
   class_map:
     Screaming: scream
     Shout: shout
     Yell: shout
+    Bellow: shout
     Gunshot, gunfire: gunshot
-    Glass: glass
+    Machine gun: gunshot
+    Fusillade: gunshot
     Shatter: glass
-  min_conf: 0.3
+  # Modele göre event eşiği. efficientat ESC-50 testinde: cam kırılması 0.15-0.19, ilgisiz sesler (alkış, kapı,
+  # bebek ağlaması, metro) <= 0.04. YAMNet cam kırılmasını 0.20 ile "silah" sandı -> gunshot eşiği yüksek.
+  min_conf:
+    efficientat: {scream: 0.15, shout: 0.15, gunshot: 0.15, glass: 0.12}
+    yamnet:      {scream: 0.2, shout: 0.2, gunshot: 0.35, glass: 0.2}
+  # dB = dBFS + db_offset. Mikrofona göre kalibre edin: sessiz odada ~35-45, normal konuşmada ~55-65 göstermeli.
+  db_offset: 100
+  db_min_hops: 2         # eşik art arda bu kadar ölçümde aşılırsa (2 x 0.5 sn = 1 sn) "shout" event'i
   # dB eşikleri: bölge tipine ve zamana göre (break = teneffüs, lesson = ders)
   db_thresholds:
     default: {lesson: 70, break: 85}
