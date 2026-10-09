@@ -73,6 +73,14 @@ def create_app(cfg: dict[str, Any], storage: Storage, frames: FrameStore, hub: H
     async def _bind() -> None:
         hub.bind_loop(asyncio.get_running_loop())
 
+    @app.middleware("http")
+    async def _no_cache(request, call_next):
+        # Geliştirme sırasında tarayıcı eski app.js/style.css'i önbellekten çalıştırmasın
+        response = await call_next(request)
+        if not request.url.path.startswith(("/video/", "/snapshots/")):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
+
     @app.get("/")
     def index() -> FileResponse:
         return FileResponse(WEB_DIR / "index.html")
