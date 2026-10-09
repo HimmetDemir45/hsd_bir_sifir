@@ -255,14 +255,20 @@ document.getElementById("confirmBtn").addEventListener("click", () => act("confi
 document.getElementById("dismissBtn").addEventListener("click", () => act("dismiss"));
 document.getElementById("closeBtn").addEventListener("click", () => { resultFor = null; updateModal(); });
 
+// Uyarı listesini sunucudan çekip birleştirir. İlk yüklemede ve HER WebSocket bağlantısında çağrılır:
+// liste çekildikten sonra WebSocket açılana kadar (veya bağlantı koptuğu sürede) gelen uyarılar kaybolmasın.
+async function syncAlerts() {
+  const list = await (await fetch("/api/alerts")).json();
+  for (const a of list) alerts.set(a.id, a);
+  render(null);
+  updateModal();
+  refreshStats();
+}
+
 async function loadInitial() {
   try {
     zones = await (await fetch("/api/zones")).json();
-    const list = await (await fetch("/api/alerts")).json();
-    for (const a of list) alerts.set(a.id, a);
-    render(null);
-    updateModal();
-    refreshStats();
+    await syncAlerts();
   } catch (e) {
     console.error("ilk yükleme başarısız", e);
   }
@@ -282,6 +288,7 @@ function connect() {
   ws.onopen = () => {
     connEl.textContent = "bağlı"; connEl.className = "conn on";
     if (wasDisconnected) { reconnectVideo(); wasDisconnected = false; }
+    syncAlerts().catch((e) => console.error("senkronizasyon başarısız", e));
   };
   ws.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
