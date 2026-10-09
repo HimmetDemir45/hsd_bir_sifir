@@ -1,6 +1,6 @@
 # Demo rehberi (sunum: 10 Ekim 09.30)
 
-Üç seçenek, güvenilirden etkileyiciye. Sunumda **önce 1'i** gösterin; zaman ve koşullar uygunsa 3'ü ekleyin.
+Sunumda **önce 0 (veri seti, eğitilmiş modeller)**, sonra 1; zaman ve koşullar uygunsa 3.
 2 her zaman yedekte açık dursun (bir şey bozulursa ona geçin).
 
 ## 0. Veri seti demosu — eğitilmiş modeller (ANA DEMO)
