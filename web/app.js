@@ -46,7 +46,7 @@ function render(freshId) {
 
     const status = document.createElement("div");
     status.className = "status";
-    status.textContent = STATUS_TR[a.status] || a.status;
+    status.textContent = statusText(a);
 
     li.append(top, reasons);
     const url = clipUrl(a);
@@ -60,8 +60,44 @@ function render(freshId) {
       li.append(link);
     }
     li.append(status);
+    if (a.level !== "red" && a.status === "pending") li.append(cardActions(a));
     return li;
   }));
+}
+
+// Kırmızıda "Onaylandı" (112 simülasyonu); turuncu/sarıda sadece "Görüldü" (112 ile ilgisi yok)
+function statusText(a) {
+  if (a.level !== "red" && a.status === "confirmed") return "Görüldü";
+  return STATUS_TR[a.status] || a.status;
+}
+
+// Turuncu/sarı kart düğmeleri. Kırmızı uyarı kendi modalını kullanır. Stil: .alert-actions / .alert-btn (C)
+function cardActions(a) {
+  const box = document.createElement("div");
+  box.className = "alert-actions";
+  for (const [kind, label] of [["confirm", "Gördüm"], ["dismiss", "Yanlış alarm"]]) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "alert-btn " + kind;
+    btn.textContent = label;
+    btn.addEventListener("click", () => cardAction(a.id, kind, box));
+    box.append(btn);
+  }
+  return box;
+}
+
+async function cardAction(id, kind, box) {
+  box.querySelectorAll("button").forEach((b) => { b.disabled = true; });
+  try {
+    const res = await fetch("/api/alerts/" + id + "/" + kind, { method: "POST" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    alerts.set(id, await res.json());
+    render(null);
+    scheduleStats();
+  } catch (e) {
+    console.error("işlem başarısız", e);
+    box.querySelectorAll("button").forEach((b) => { b.disabled = false; });
+  }
 }
 
 function upsert(alert, fresh) {
@@ -159,14 +195,31 @@ function renderWeekly(summary) {
   }));
 }
 
+// Haftalık tablonun altındaki tek satır. Eleman C'nin HTML'inde yoksa burada oluşturulur.
+function renderFalseAlarms(stats) {
+  let el = document.getElementById("falseAlarm");
+  if (!el) {
+    const table = document.getElementById("weekly");
+    if (!table) return;
+    el = document.createElement("p");
+    el.id = "falseAlarm";
+    el.className = "panel-note";
+    table.insertAdjacentElement("afterend", el);
+  }
+  el.hidden = stats.decided === 0;   // karar verilmiş uyarı yoksa oran anlamsız
+  el.textContent = "Yanlış alarm: " + stats.dismissed + " / " + stats.decided + " karar verilen uyarı";
+}
+
 async function refreshStats() {
   try {
-    const [counts, summary] = await Promise.all([
+    const [counts, summary, falseAlarms] = await Promise.all([
       fetch("/api/heatmap").then((r) => r.json()),
       fetch("/api/summary/weekly").then((r) => r.json()),
+      fetch("/api/summary/false-alarms").then((r) => r.json()),
     ]);
     drawHeatmap(counts);
     renderWeekly(summary);
+    renderFalseAlarms(falseAlarms);
   } catch (e) {
     console.error("istatistikler yüklenemedi", e);
   }

@@ -113,7 +113,8 @@ def create_app(cfg: dict[str, Any], storage: Storage, frames: FrameStore, hub: H
             raise HTTPException(404, "Uyarı bulunamadı")
         alert = storage.update_alert_status(alert_id, status)
         hub.publish(alert)
-        if notifier and status == "confirmed" and before["status"] != "confirmed":
+        # "112 arandı (simülasyon)" mesajı SADECE kırmızıda; turuncu/sarıdaki "Gördüm" bildirim göndermez
+        if notifier and status == "confirmed" and before["status"] != "confirmed" and alert["level"] == "red":
             notifier.send_confirmation(alert)  # Telegram'a "112 arandı (simülasyon)" + sınıfta kalın
         return alert
 
@@ -128,6 +129,10 @@ def create_app(cfg: dict[str, Any], storage: Storage, frames: FrameStore, hub: H
     @app.get("/api/summary/weekly")
     def weekly() -> dict:
         return storage.weekly_summary(time.time() - WEEK_S)
+
+    @app.get("/api/summary/false-alarms")
+    def false_alarms() -> dict:
+        return storage.false_alarm_stats(time.time() - WEEK_S)
 
     @app.get("/api/heatmap")
     def heatmap() -> dict:
