@@ -70,6 +70,14 @@ class Notifier:
     def send_confirmation(self, alert: dict[str, Any]) -> None:
         self._dispatch(self.format_confirmation(alert), None)
 
+    def format_unconfirmed(self, alert: dict[str, Any], timeout_s: float) -> str:
+        return (f"⏰ KIRMIZI UYARI {int(timeout_s)} sn'dir ONAYLANMADI — {self._zone_name(alert['zone_id'])}\n"
+                "Lütfen ekrandan karar verin. Otomatik arama / polis bildirimi yapılmaz.")
+
+    def send_unconfirmed(self, alert: dict[str, Any], timeout_s: float) -> None:
+        """Zaman aşımı: sadece EK BİLDİRİM (arama yok)."""
+        self._dispatch(self.format_unconfirmed(alert, timeout_s), alert.get("snapshot"))
+
     def _dispatch(self, text: str, snapshot: str | None) -> None:
         print(f"[bildirim] {text.replace(chr(10), ' | ')}", flush=True)
         if not self.enabled:
