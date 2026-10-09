@@ -141,15 +141,30 @@
         <div id="redActions" class="modal-actions">
           <p class="modal-note">Karar sizde. Polise otomatik bildirim yapılmaz.</p>
           <button id="confirmBtn" class="btn confirm" type="button">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h3.2l1.6 4.2-2.1 1.4a11 11 0 0 0 5.2 5.2l1.4-2.1 4.2 1.6V17a2.5 2.5 0 0 1-2.7 2.5C9 19 5 15 4.5 6.2A2.5 2.5 0 0 1 5 3.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-            <span>Onayla: 112'yi ara <small>(simülasyon)</small></span>
+            <span class="btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 3.5h3.2l1.6 4.2-2.1 1.4a11 11 0 0 0 5.2 5.2l1.4-2.1 4.2 1.6V17a2.5 2.5 0 0 1-2.7 2.5C9 19 5 15 4.5 6.2A2.5 2.5 0 0 1 5 3.5Z" fill="currentColor"/></svg>
+            </span>
+            <span class="btn-text">Onayla: 112'yi ara <small>(simülasyon)</small></span>
           </button>
           <button id="dismissBtn" class="btn dismiss" type="button">Yanlış alarm</button>
         </div>
 
+        <!-- Onay sonrası: çağrı kartı (SİMÜLASYON, gerçek arama yok) + yapılan işlemler -->
         <div id="redResult" class="modal-result" hidden>
-          <p class="done">112 arandı (simülasyon)</p>
-          <p class="done">Tüm öğretmenlere "sınıfta kalın" mesajı gönderildi</p>
+          <div class="call-card">
+            <div class="call-avatar" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 3.5h3.2l1.6 4.2-2.1 1.4a11 11 0 0 0 5.2 5.2l1.4-2.1 4.2 1.6V17a2.5 2.5 0 0 1-2.7 2.5C9 19 5 15 4.5 6.2A2.5 2.5 0 0 1 5 3.5Z" fill="currentColor"/></svg>
+            </div>
+            <div class="call-info">
+              <span class="call-chip">Simülasyon · Gerçek arama yapılmadı</span>
+              <p class="call-number">112</p>
+              <p class="call-name">Acil Çağrı Merkezi</p>
+            </div>
+          </div>
+          <ol class="call-steps" aria-label="Yapılan işlemler">
+            <li>112 arandı (simülasyon)</li>
+            <li>Tüm öğretmenlere "sınıfta kalın" mesajı gönderildi</li>
+          </ol>
           <button id="closeBtn" class="btn dismiss" type="button">Kapat</button>
         </div>
       </div>
