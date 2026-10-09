@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OkulKalkan</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1>OkulKalkan</h1>
+    <span id="conn" class="conn off">bağlantı yok</span>
+  </header>
+  <main>
+    <section class="video">
+      <h2>Canlı görüntü</h2>
+      <img id="cam" src="/video/cam1" alt="Canlı kamera">
+    </section>
+    <section class="feed">
+      <h2>Uyarılar <span id="count"></span></h2>
+      <ul id="alerts"></ul>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

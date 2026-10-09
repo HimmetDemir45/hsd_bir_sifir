@@ -20,8 +20,10 @@ class FusionEngine:
         in_queue: "queue.Queue[Event]",
         on_alert: Callable[[Alert], None],
         crowd_size_by_zone: Callable[[], dict[str, int]] | None = None,
+        on_event: Callable[[Event], None] | None = None,
     ) -> None:
         self.cfg = cfg
+        self.on_event = on_event  # ham event kaydı (DB / ısı haritası) için
         self.in_queue = in_queue
         self.on_alert = on_alert
         self.crowd_size_by_zone = crowd_size_by_zone  # (a)/(b) kararı gelene kadar dışarıdan verilir
@@ -31,6 +33,8 @@ class FusionEngine:
     # --- tek event işleme (testler doğrudan bunu çağırır) ---
     def process(self, event: Event, crowd_size: int | None = None) -> list[Alert]:
         """Event'i işler; yeni veya güncellenen uyarıları döndürür (aynı zamanda on_alert'e de iletir)."""
+        if self.on_event:
+            self.on_event(event)
         if crowd_size is None:
             crowd_size = (self.crowd_size_by_zone() if self.crowd_size_by_zone else {}).get(event.zone_id, 0)
         result = classify(event, self.cfg, crowd_size)
