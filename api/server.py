@@ -133,15 +133,16 @@ def create_app(cfg: dict[str, Any], storage: Storage, frames: FrameStore, hub: H
     @app.get("/video/{camera_id}")
     async def video(camera_id: str) -> StreamingResponse:
         async def gen():
-            last = -1
+            last, last_sent = -1, 0.0
             while True:
                 item = frames.get(camera_id)
                 if item is None:
                     seq, jpeg = 0, waiting
                 else:
                     seq, jpeg = item
-                if seq != last:
-                    last = seq
+                # Chrome bir kareyi ancak sonraki kare gelince çizer: görüntü değişmese de 1 sn'de bir tekrar gönder
+                if seq != last or time.time() - last_sent > 1.0:
+                    last, last_sent = seq, time.time()
                     yield (b"--frame\r\nContent-Type: image/jpeg\r\nContent-Length: "
                            + str(len(jpeg)).encode() + b"\r\n\r\n" + jpeg + b"\r\n")
                 await asyncio.sleep(0.05)

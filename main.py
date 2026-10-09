@@ -70,9 +70,9 @@ def audio_loop(cfg: dict, zone_id: str, audio_src: str, events: "queue.Queue[Eve
         print("[audio] detectors.audio_cls henüz yok (Kişi A'nın işi); ses atlanıyor.")
         return
     try:
-        if audio_src != "mic":
-            cfg["audio"]["source"] = audio_src  # A ile netleşecek: wav dosyası arayüzü
-        AudioDetector(cfg, zone_id, events).run(stop)
+        # "mic" -> config'deki audio.input (mikrofon); aksi halde wav dosyası (gerçek zamanlı oynatılır)
+        source = None if audio_src == "mic" else audio_src
+        AudioDetector(cfg, zone_id, events).run(stop, source=source)
     except Exception as e:  # ses bozulsa görüntü hattı çalışmaya devam etsin
         print(f"[audio] durdu: {e!r}")
 
