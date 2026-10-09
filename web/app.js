@@ -22,10 +22,11 @@ function fmtTime(ts) {
 
 function render(freshId) {
   const sorted = [...alerts.values()].sort((a, b) => b.created_at - a.created_at);
-  countEl.textContent = "(" + sorted.length + ")";
+  countEl.textContent = String(sorted.length);   // parantez yok: rozet olarak CSS'te biçimlenir
   listEl.replaceChildren(...sorted.map((a) => {
     const li = document.createElement("li");
     li.className = "alert " + a.level + (a.id === freshId ? " fresh" : "");
+    li.dataset.status = a.status;   // CSS: [data-status="dismissed"] (yanlış alarm kartı soluklaşır)
 
     const top = document.createElement("div");
     top.className = "top";
@@ -84,6 +85,11 @@ function scheduleStats() {   // uyarı yağmurunda her seferinde değil, en fazl
   statsTimer = setTimeout(() => { statsTimer = null; refreshStats(); }, 1000);
 }
 
+// Sayfanın yerel fontu (web/assets, internetsiz); yüklenemezse sistem fontu
+const PLAN_FONT = '"IBM Plex Sans", system-ui, sans-serif';
+// Font geç yüklenirse tuval ilk çizimde yedek fontla çizilmiş olur: font hazır olunca yeniden çiz
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => refreshStats());
+
 function drawHeatmap(counts) {
   planCtx.clearRect(0, 0, planCanvas.width, planCanvas.height);
   if (floorplanReady) planCtx.drawImage(floorplan, 0, 0, planCanvas.width, planCanvas.height);
@@ -116,7 +122,7 @@ function drawHeatmap(counts) {
         planCtx.fillStyle = "#fff";
         planCtx.textAlign = "center";
         planCtx.textBaseline = "middle";
-        planCtx.font = "bold 12px system-ui, sans-serif";
+        planCtx.font = "bold 12px " + PLAN_FONT;
         planCtx.fillText(String(n), cx, by + 1);
         planCtx.textBaseline = "alphabetic";
       }
@@ -124,9 +130,9 @@ function drawHeatmap(counts) {
     }
     planCtx.fillStyle = "#222";
     planCtx.textAlign = "center";
-    planCtx.font = "bold 15px system-ui, sans-serif";
+    planCtx.font = "bold 15px " + PLAN_FONT;
     planCtx.fillText(z.name, cx, cy - 4);
-    planCtx.font = "13px system-ui, sans-serif";
+    planCtx.font = "13px " + PLAN_FONT;
     planCtx.fillText(n + " olay", cx, cy + 14);
   }
 }
@@ -171,13 +177,14 @@ const modal = document.getElementById("redModal");
 const alarm = document.getElementById("alarm");
 const soundBtn = document.getElementById("soundBtn");
 let soundOn = false;
+soundBtn.textContent = "Alarm sesini aç";   // açılış metni, tıklayınca değişen metinlerle tutarlı
 let resultFor = null;   // onaylandıktan sonra sonuç ekranı gösterilen uyarı id'si
 
 soundBtn.addEventListener("click", () => {
   // Tarayıcılar sesi ancak kullanıcı tıklamasından sonra çalmaya izin verir: bu buton o tıklama.
   soundOn = !soundOn;
   soundBtn.className = "sound " + (soundOn ? "on" : "off");
-  soundBtn.textContent = soundOn ? "Alarm sesi açık" : "Alarm sesi kapalı (açmak için tıkla)";
+  soundBtn.textContent = soundOn ? "Alarm sesi açık" : "Alarm sesini aç";
   updateModal();
 });
 
@@ -201,6 +208,7 @@ function setModalClip(a) {
 
 function showModalFor(a) {
   document.getElementById("redZone").textContent = zoneName(a.zone_id);
+  document.getElementById("redTime").textContent = fmtTime(a.created_at);
   const snap = document.getElementById("redSnap");
   // Snapshot yoksa canlı yayının görüntüsü gösterilir
   snap.src = a.snapshot ? "/snapshots/" + a.snapshot.split(/[\\/]/).pop() : "/video/cam1";
@@ -282,14 +290,17 @@ function resetView() {
   refreshStats();
 }
 
-// Buton C'nin index.html'inde: <button id="demoResetBtn" hidden>. Yoksa bu bölüm sessizce atlanır.
-async function setupDemoReset() {
-  const btn = document.getElementById("demoResetBtn");
-  if (!btn) return;
+// GET /api/status -> {"demo": true|false}. Demo etiketi (#demoTag) ve "demoyu yeniden başlat" düğmesi
+// (#demoResetBtn) sadece demo modunda görünür; ikisi de C'nin index.html'inde, yoksa sessizce atlanır.
+async function setupDemoMode() {
+  let demo = false;
   try {
-    const mode = await (await fetch("/api/mode")).json();
-    if (!mode.demo) return;          // gerçek kamera modunda buton hiç görünmez
-  } catch (e) { return; }
+    demo = !!(await (await fetch("/api/status")).json()).demo;
+  } catch (e) { /* sunucu yanıt vermiyorsa etiket/düğme gösterilmez */ }
+  const tag = document.getElementById("demoTag");
+  if (tag) tag.hidden = !demo;
+  const btn = document.getElementById("demoResetBtn");
+  if (!btn || !demo) return;       // gerçek kamera modunda düğme hiç görünmez
   btn.hidden = false;
   btn.addEventListener("click", async () => {
     btn.disabled = true;
@@ -335,7 +346,7 @@ function connect() {
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   const ws = new WebSocket(proto + "//" + location.host + "/ws");
   ws.onopen = () => {
-    connEl.textContent = "bağlı"; connEl.className = "conn on";
+    connEl.textContent = "Bağlı"; connEl.className = "conn on";
     if (wasDisconnected) { reconnectVideo(); wasDisconnected = false; }
     syncAlerts().catch((e) => console.error("senkronizasyon başarısız", e));
   };
@@ -345,11 +356,11 @@ function connect() {
     else if (msg.type === "reset") resetView();   // demo yeniden başlatıldı: ekranı temizle
   };
   ws.onclose = () => {
-    connEl.textContent = "bağlantı yok"; connEl.className = "conn off";
+    connEl.textContent = "Bağlantı yok"; connEl.className = "conn off";
     wasDisconnected = true;
     setTimeout(connect, 1500);   // sunucu yeniden başlarsa kendiliğinden bağlanır
   };
 }
 
 loadInitial().then(connect);
-setupDemoReset();
+setupDemoMode();

@@ -70,13 +70,13 @@ def test_reset_endpoint_is_closed_outside_demo_mode():
 
     cfg = load_config()
     live = TestClient(create_app(cfg, Storage(":memory:"), FrameStore(), Hub()))
-    assert live.get("/api/mode").json() == {"demo": False}
+    assert live.get("/api/status").json() == {"demo": False}
     assert live.post("/api/demo/reset").status_code == 404
 
     called = []
     demo = TestClient(create_app(cfg, Storage(":memory:"), FrameStore(), Hub(),
                                  demo_reset=lambda: called.append(1)))
-    assert demo.get("/api/mode").json() == {"demo": True}
+    assert demo.get("/api/status").json() == {"demo": True}
     assert demo.post("/api/demo/reset").status_code == 200 and called == [1]
 
 
