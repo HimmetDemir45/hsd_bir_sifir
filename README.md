@@ -88,9 +88,10 @@ Kapalıyken veya internet yokken mesajlar sadece konsola yazılır; sistem çal�
 
 ## Görev dağılımı
 
-| Kişi A: Algılama | Kişi B: Füzyon + Backend + Dashboard |
-|---|---|
-| `sources/`, `detectors/`, `privacy/`, `models/`, `test_media/` | `fusion/`, `api/`, `storage/`, `notify/`, `web/`, `main.py` |
+| Kişi A: Algılama | Kişi B: Füzyon + Backend + Dashboard mantığı | Kişi C: Frontend tasarımı |
+|---|---|---|
+| `sources/`, `detectors/`, `privacy/`, `tools/`, `models/`, `test_media/` | `fusion/`, `api/`, `storage/`, `notify/`, `web/app.js`, `main.py` | `web/index.html`, `web/style.css`, `web/assets/` |
+| dal: `goruntu-ses` | dal: `fuzyon-web` · [docs/KISI_B.md](docs/KISI_B.md) | dal: `tasarim` · [docs/KISI_C.md](docs/KISI_C.md) |
 
 Ortak sözleşme: `core/schema.py` (Event, Alert). Değiştirmeden önce haber verin.
-`config.yaml`'da herkes kendi bölümünü düzenler.
+`config.yaml`'da herkes kendi bölümünü düzenler. C, `app.js`'in kullandığı id/sınıfları korur (bkz. KISI_C.md).
