@@ -203,7 +203,7 @@ arrow(752, 85, 718)
 text(736, 104, "GİRİŞ", 9, c=WALL, weight=600)
 
 text(44, 482, "ZEMİN KAT", 12, c=WALL, anchor="lm", weight=700)
-text(122, 482, "Okul yerleşim planı · temsili", 10, anchor="lm")
+text(122, 482, "Okul yerleşim planı · Temsili", 10, anchor="lm")
 
 # kuzey oku
 nx, ny = 735, 470
