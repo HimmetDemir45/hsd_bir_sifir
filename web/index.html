@@ -59,21 +59,41 @@
   </main>
 
   <!-- Kırmızı uyarı: tam ekran modal (insan onayı gerekir; 112 araması SİMÜLASYONDUR) -->
-  <div id="redModal" class="modal" hidden>
+  <div id="redModal" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="redTitle" hidden>
     <div class="modal-box">
-      <div class="modal-title">🔴 KIRMIZI UYARI</div>
-      <div id="redZone" class="modal-zone"></div>
-      <img id="redSnap" class="modal-snap" alt="Uyarı görüntüsü">
-      <ul id="redReasons"></ul>
-      <a id="redClip" class="clip-link" target="_blank" rel="noopener" hidden>▶ Klibi izle</a>
-      <div id="redActions" class="modal-actions">
-        <button id="confirmBtn" class="btn confirm" type="button">Onayla: 112'yi ara (simülasyon)</button>
-        <button id="dismissBtn" class="btn dismiss" type="button">Yanlış alarm</button>
-      </div>
-      <div id="redResult" class="modal-result" hidden>
-        <p>✅ 112 arandı (simülasyon)</p>
-        <p>✅ Tüm öğretmenlere "sınıfta kalın" mesajı gönderildi</p>
-        <button id="closeBtn" class="btn dismiss" type="button">Kapat</button>
+      <figure class="modal-media">
+        <img id="redSnap" class="modal-snap" alt="Uyarı anının görüntüsü (yüzler bulanık)">
+        <figcaption class="modal-media-tag">Olay anı · yüzler bulanık</figcaption>
+      </figure>
+
+      <div class="modal-body">
+        <div class="modal-head">
+          <svg class="modal-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill-rule="evenodd" d="M7.9 1.5h8.2l6.4 6.4v8.2l-6.4 6.4H7.9l-6.4-6.4V7.9l6.4-6.4Zm2.8 5h2.6l-.4 7h-1.8l-.4-7Zm1.3 8.7a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z" fill="currentColor"/>
+          </svg>
+          <div>
+            <h2 id="redTitle" class="modal-title">Kırmızı uyarı</h2>
+            <p class="modal-zone"><span class="modal-zone-label">Bölge</span> <span id="redZone"></span></p>
+          </div>
+        </div>
+
+        <ul id="redReasons" class="modal-reasons"></ul>
+        <a id="redClip" class="clip-link" target="_blank" rel="noopener" hidden>▶ Klibi izle</a>
+
+        <div id="redActions" class="modal-actions">
+          <p class="modal-note">Karar sizde. Polise otomatik bildirim yapılmaz.</p>
+          <button id="confirmBtn" class="btn confirm" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h3.2l1.6 4.2-2.1 1.4a11 11 0 0 0 5.2 5.2l1.4-2.1 4.2 1.6V17a2.5 2.5 0 0 1-2.7 2.5C9 19 5 15 4.5 6.2A2.5 2.5 0 0 1 5 3.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            <span>Onayla: 112'yi ara <small>(simülasyon)</small></span>
+          </button>
+          <button id="dismissBtn" class="btn dismiss" type="button">Yanlış alarm</button>
+        </div>
+
+        <div id="redResult" class="modal-result" hidden>
+          <p class="done">112 arandı (simülasyon)</p>
+          <p class="done">Tüm öğretmenlere "sınıfta kalın" mesajı gönderildi</p>
+          <button id="closeBtn" class="btn dismiss" type="button">Kapat</button>
+        </div>
       </div>
     </div>
   </div>
