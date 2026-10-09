@@ -58,6 +58,7 @@ def camera_loop(cfg: dict, cam_cfg: dict, source: str, events: "queue.Queue[Even
     pose_holder[zone_id] = pose
     camera = Camera(source, loop_file=True)
     min_dt = 1.0 / cfg["general"]["target_fps"]
+    n_frames, fps_t0 = 0, time.time()
     try:
         while not stop.is_set():
             t0 = time.time()
@@ -79,6 +80,10 @@ def camera_loop(cfg: dict, cam_cfg: dict, source: str, events: "queue.Queue[Even
             if ok:
                 frames.set(cam_id, buf.tobytes())
             dt = time.time() - t0
+            n_frames += 1
+            if t0 - fps_t0 >= 10.0:  # işleme hızı: düşükse hız/süre kuralları (kavga vb.) kaçırılabilir
+                print(f"[camera] işleme hızı: {n_frames / (t0 - fps_t0):.1f} FPS", flush=True)
+                n_frames, fps_t0 = 0, t0
             if dt < min_dt and not camera.is_file:
                 time.sleep(min_dt - dt)
     finally:
@@ -107,6 +112,7 @@ def main() -> None:
     ap.add_argument("--demo", action="store_true", help="kamera yerine hazır sahte senaryo")
     ap.add_argument("--speed", type=float, default=1.0, help="--demo zaman hızlandırma")
     ap.add_argument("--db", default="storage/events.db")
+    ap.add_argument("--fresh", action="store_true", help="başlamadan önce DB'yi sil (temiz demo)")
     ap.add_argument("--port", type=int, default=None, help="config api.port'u ezer (8000 doluysa)")
     args = ap.parse_args()
 
@@ -116,6 +122,11 @@ def main() -> None:
     cam_cfg = cfg["cameras"][0]
     events: "queue.Queue[Event]" = queue.Queue()
     stop = threading.Event()
+    if args.fresh:
+        db_path = resolve_path(args.db)
+        if db_path.is_file():
+            db_path.unlink()
+            print(f"[db] {db_path.name} silindi (--fresh)")
     storage = Storage(args.db)
     frames, hub = FrameStore(), Hub()
     pose_holder: dict = {}  # zone_id -> PoseDetector (kalabalık bilgisi için)
