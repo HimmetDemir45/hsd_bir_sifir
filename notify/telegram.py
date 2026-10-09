@@ -103,10 +103,12 @@ class Notifier:
             else:
                 r = requests.post(API.format(token=self.token, method="sendMessage"),
                                   data={"chat_id": self.chat_id, "text": text}, timeout=TIMEOUT_S)
-            if not r.ok:
-                print(f"[telegram] HTTP {r.status_code}: {self._redact(r.text[:120])}")
+            if r.ok:
+                print(f"[telegram] gönderildi: {text.splitlines()[0][:60]}", flush=True)
+            else:
+                print(f"[telegram] HTTP {r.status_code}: {self._redact(r.text[:120])}", flush=True)
         except Exception as e:  # internet yok vb.: sadece logla
-            print(f"[telegram] gönderilemedi: {type(e).__name__}: {self._redact(str(e))[:200]}")
+            print(f"[telegram] gönderilemedi: {type(e).__name__}: {self._redact(str(e))[:200]}", flush=True)
 
     def _redact(self, text: str) -> str:
         """requests hata metinleri URL'yi (/bot<TOKEN>/...) içerir: token asla log'a yazılmasın."""
