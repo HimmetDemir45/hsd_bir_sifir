@@ -99,6 +99,7 @@ def main() -> None:
     ap.add_argument("--demo", action="store_true", help="kamera yerine hazır sahte senaryo")
     ap.add_argument("--speed", type=float, default=1.0, help="--demo zaman hızlandırma")
     ap.add_argument("--db", default="storage/events.db")
+    ap.add_argument("--fresh", action="store_true", help="başlamadan önce DB'yi sil (temiz demo)")
     ap.add_argument("--port", type=int, default=None, help="config api.port'u ezer (8000 doluysa)")
     args = ap.parse_args()
 
@@ -108,6 +109,11 @@ def main() -> None:
     cam_cfg = cfg["cameras"][0]
     events: "queue.Queue[Event]" = queue.Queue()
     stop = threading.Event()
+    if args.fresh:
+        db_path = resolve_path(args.db)
+        if db_path.is_file():
+            db_path.unlink()
+            print(f"[db] {db_path.name} silindi (--fresh)")
     storage = Storage(args.db)
     frames, hub = FrameStore(), Hub()
     pose_holder: dict = {}  # zone_id -> PoseDetector (kalabalık bilgisi için)
