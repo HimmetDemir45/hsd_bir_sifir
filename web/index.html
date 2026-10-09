@@ -32,6 +32,8 @@
       </span>
       <span id="conn" class="conn off">bağlantı yok</span>
       <button id="soundBtn" class="sound off" type="button">Alarm sesi kapalı (açmak için tıkla)</button>
+      <!-- Sadece demo modunda görünür: app.js (/api/status) hidden'ı kaldırır; gerçek kamera modunda gizli kalır -->
+      <button id="demoResetBtn" class="demo-reset" type="button" hidden>Demoyu yeniden başlat</button>
     </div>
   </header>
 
@@ -54,6 +56,13 @@
       <div class="cam-overlay" aria-hidden="true">
         <span class="live-chip">Canlı · Kamera 1</span>
         <span class="blur-chip">Yüzler bulanık</span>
+      </div>
+      <!-- Ortam ses seviyesi: app.js /api/level ile doldurur; ses dedektörü yoksa (demo) gizli kalır.
+           --db-threshold: eşik konumu, data-over="1": eşik üstü -->
+      <div id="dbMeter" class="db-meter" role="meter" aria-label="Ortam ses seviyesi" hidden>
+        <span class="db-label">Ses</span>
+        <span class="db-track"><i id="dbFill"></i></span>
+        <span id="dbValue" class="db-value"></span>
       </div>
     </section>
 
@@ -101,6 +110,8 @@
         <thead><tr><th scope="col">Bölge</th><th scope="col" class="y">Sarı</th><th scope="col" class="o">Turuncu</th><th scope="col" class="r">Kırmızı</th></tr></thead>
         <tbody></tbody>
       </table>
+      <!-- app.js doldurur: "Yanlış alarm: x / y karar verilen uyarı"; karar yoksa gizli -->
+      <p id="falseAlarm" class="panel-note" hidden></p>
     </section>
   </main>
 
