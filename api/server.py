@@ -65,7 +65,8 @@ def _placeholder_jpeg(text: str) -> bytes:
     return cv2.imencode(".jpg", img)[1].tobytes()
 
 
-def create_app(cfg: dict[str, Any], storage: Storage, frames: FrameStore, hub: Hub) -> FastAPI:
+def create_app(cfg: dict[str, Any], storage: Storage, frames: FrameStore, hub: Hub,
+               notifier: Any | None = None) -> FastAPI:
     app = FastAPI(title="OkulKalkan")
     waiting = _placeholder_jpeg("Kamera bekleniyor...")
 
@@ -83,10 +84,13 @@ def create_app(cfg: dict[str, Any], storage: Storage, frames: FrameStore, hub: H
 
     def _set_status(alert_id: str, status: str) -> dict:
         # Not: "confirmed" sadece kayıttır; gerçek 112 araması YOK (simülasyon, bkz. CLAUDE.md).
-        alert = storage.update_alert_status(alert_id, status)
-        if alert is None:
+        before = storage.get_alert(alert_id)
+        if before is None:
             raise HTTPException(404, "Uyarı bulunamadı")
+        alert = storage.update_alert_status(alert_id, status)
         hub.publish(alert)
+        if notifier and status == "confirmed" and before["status"] != "confirmed":
+            notifier.send_confirmation(alert)  # Telegram'a "112 arandı (simülasyon)" + sınıfta kalın
         return alert
 
     @app.post("/api/alerts/{alert_id}/confirm")

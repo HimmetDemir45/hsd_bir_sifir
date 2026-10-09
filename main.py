@@ -17,11 +17,17 @@ import cv2
 import uvicorn
 
 from api.server import FrameStore, Hub, _placeholder_jpeg, create_app
-from core.config import load_config
+from core.config import load_config, resolve_path
 from core.schema import Alert, Event
 from fusion import demo
 from fusion.engine import FusionEngine
+from notify.telegram import Notifier
 from storage.db import Storage
+
+try:  # Kişi A'nın privacy/blur.py'si; hazır değilse None
+    from privacy.blur import blur_faces
+except ImportError:
+    blur_faces = None
 
 JPEG_QUALITY = 70
 
@@ -51,7 +57,8 @@ def camera_loop(cfg: dict, cam_cfg: dict, source: str, events: "queue.Queue[Even
             tracks, _ = pose.process(frame, camera.last_ts)
             weapon.draw(frame, w_dets)
             pose.draw(frame, tracks)
-            # M3: frame = blur_faces(frame)  (privacy/blur.py hazır olunca, JPEG'e çevirmeden ÖNCE)
+            if blur_faces is not None:
+                frame = blur_faces(frame)  # yayın ve snapshot'tan ÖNCE (gizlilik ilkesi)
             ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
             if ok:
                 frames.set(cam_id, buf.tobytes())
@@ -84,9 +91,12 @@ def main() -> None:
     ap.add_argument("--demo", action="store_true", help="kamera yerine hazır sahte senaryo")
     ap.add_argument("--speed", type=float, default=1.0, help="--demo zaman hızlandırma")
     ap.add_argument("--db", default="storage/events.db")
+    ap.add_argument("--port", type=int, default=None, help="config api.port'u ezer (8000 doluysa)")
     args = ap.parse_args()
 
     cfg = load_config()
+    if args.port:
+        cfg["api"]["port"] = args.port
     cam_cfg = cfg["cameras"][0]
     events: "queue.Queue[Event]" = queue.Queue()
     stop = threading.Event()
@@ -94,10 +104,31 @@ def main() -> None:
     frames, hub = FrameStore(), Hub()
     pose_holder: dict = {}  # zone_id -> PoseDetector (kalabalık bilgisi için)
 
+    notifier = Notifier(cfg)
+    snap_levels = set(cfg["privacy"]["record_clips_for"])  # snapshot/klip sadece turuncu-kırmızıda
+    snap_dir = resolve_path(cfg["general"]["snapshot_dir"])
+    # Gerçek kamerada yüz bulanıklaştırma yoksa snapshot ALMA (gizlilik); demo karesi sahte, sorun yok.
+    snapshots_allowed = args.demo or blur_faces is not None
+    if not snapshots_allowed:
+        print("[privacy] privacy/blur.py yok -> snapshot alınmıyor, yayın bulanıklaştırılmıyor (A'dan bekleniyor).")
+
+    def take_snapshot(alert: Alert) -> None:
+        if alert.snapshot or alert.level not in snap_levels or not snapshots_allowed:
+            return
+        item = frames.get(cam_cfg["id"])  # yayındaki kare zaten bulanık
+        if item is None:
+            return
+        snap_dir.mkdir(parents=True, exist_ok=True)
+        path = snap_dir / f"{alert.id}.jpg"
+        path.write_bytes(item[1])
+        alert.snapshot = f"{cfg['general']['snapshot_dir']}/{path.name}"
+
     def on_alert(alert: Alert) -> None:
+        take_snapshot(alert)
         storage.save_alert(alert)
         latest = storage.get_alert(alert.id) or alert.to_dict()  # DB'deki güncel status ile
         hub.publish(latest)
+        notifier.send_alert(latest)
         print(f"[ALERT {alert.level.upper()}] {alert.zone_id}: {'; '.join(alert.reasons)}", flush=True)
 
     def crowd() -> dict[str, int]:
@@ -119,7 +150,7 @@ def main() -> None:
         threads.append(threading.Thread(target=audio_loop, name="audio", daemon=True,
                                         args=(cfg, cam_cfg["zone_id"], args.audio, events, stop)))
 
-    app = create_app(cfg, storage, frames, hub)
+    app = create_app(cfg, storage, frames, hub, notifier)
     server = uvicorn.Server(uvicorn.Config(app, host=cfg["api"]["host"], port=cfg["api"]["port"],
                                            log_level="warning"))
     threads.append(threading.Thread(target=server.run, name="api", daemon=True))
