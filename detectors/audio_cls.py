@@ -159,6 +159,7 @@ class AudioDetector:
         self._buf = np.zeros(self.window, dtype=np.float32)
         self._pending = np.zeros(0, dtype=np.float32)
         self._loud_hops = 0
+        self.db_rule_enabled = True  # run() dosya kaynağında config'e göre kapatır
         self._last_emit: dict[str, float] = {}
         self.last_db: float = 0.0
         self.last_scores: dict[str, float] = {t: 0.0 for t in EVENT_TYPES}
@@ -207,7 +208,7 @@ class AudioDetector:
         self.last_db = max(0.0, 20 * math.log10(rms + 1e-10) + self.cfg["db_offset"])
         threshold = self.current_db_threshold(now)
         self._loud_hops = self._loud_hops + 1 if self.last_db >= threshold else 0
-        if self._loud_hops >= self.cfg["db_min_hops"]:
+        if self.db_rule_enabled and self._loud_hops >= self.cfg["db_min_hops"]:
             conf = min(1.0, 0.5 + (self.last_db - threshold) / 20)
             ev = self._emit("shout", conf, now)
             if ev:
@@ -229,6 +230,9 @@ class AudioDetector:
         from sources.audio import AudioSource
 
         src = AudioSource(self.cfg["input"] if source is None else source, self.sample_rate)
+        if src.is_file and not self.cfg.get("db_rule_on_files", False):
+            self.db_rule_enabled = False
+            print("[audio] ses dosyası: dB kuralı kapalı (config audio.db_rule_on_files)")
         try:
             while not stop_event.is_set():
                 chunk = src.read()

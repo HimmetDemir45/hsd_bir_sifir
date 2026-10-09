@@ -102,7 +102,8 @@ class PoseDetector:
         self.tracks: dict[int, Track] = {}
         self._next_id = 1
         self._frame_idx = 0
-        self._pair_since: dict[tuple[int, int], float] = {}
+        self._fight_since: float | None = None
+        self._fight_last = -1e9
         self._running_since: float | None = None
         self._last_emit: dict[str, float] = {}
         self.status = PoseStatus()
@@ -219,23 +220,29 @@ class PoseDetector:
             if tr.limb_speed >= c["fight"]["limb_speed"]:
                 tr.last_fast_ts = now
 
-        # kavga: yakın iki kişi + en az birinde yakın zamanda hızlı kol hareketi
-        active_pairs: set[tuple[int, int]] = set()
+        # kavga: yakın iki kişi + en az birinde yakın zamanda hızlı kol hareketi.
+        # Süre çift bazında değil sahne bazında tutulur: hızlı hareket ve düşük FPS'te takip numaraları
+        # değişiyor, çift bazında sayaç sürekli sıfırlanıyordu (Kavga.mp4 testinde 26 sn'de tek event).
+        fight_ids: set[int] = set()
+        fight_confs: list[float] = []
         for a, b in itertools.combinations(tracks, 2):
             dist = float(np.linalg.norm(a.person.center - b.person.center))
             close = dist < c["fight"]["proximity_ratio"] * (a.person.scale + b.person.scale) / 2
             fast = now - max(a.last_fast_ts, b.last_fast_ts) <= c["fight"]["hold_s"]
-            if not (close and fast):
-                continue
-            key = (min(a.id, b.id), max(a.id, b.id))
-            active_pairs.add(key)
-            since = self._pair_since.setdefault(key, now)
-            if now - since >= c["fight"]["min_duration_s"]:
-                status.fighting_ids.update(key)
-                ev = self._emit("fight", (a.person.conf + b.person.conf) / 2, now)
-                if ev:
-                    events.append(ev)
-        self._pair_since = {k: v for k, v in self._pair_since.items() if k in active_pairs}
+            if close and fast:
+                fight_ids.update((a.id, b.id))
+                fight_confs.append((a.person.conf + b.person.conf) / 2)
+        if fight_ids:
+            self._fight_last = now
+            if self._fight_since is None:
+                self._fight_since = now
+        elif self._fight_since is not None and now - self._fight_last > c["fight"]["gap_s"]:
+            self._fight_since = None
+        if fight_ids and now - self._fight_since >= c["fight"]["min_duration_s"]:
+            status.fighting_ids = fight_ids
+            ev = self._emit("fight", max(fight_confs), now)
+            if ev:
+                events.append(ev)
 
         # düşme: gövde yatay, min süre; her düşme bölümünde bir kez
         for tr in tracks:

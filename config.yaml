@@ -63,6 +63,7 @@ pose:
     proximity_ratio: 0.6       # merkezler arası mesafe < kişi boyu * oran
     limb_speed: 1.5            # bilek/dirsek hızı (kişi boyu / sn)
     hold_s: 0.5                # hızlı hareket bu kadar süre "devam ediyor" sayılır (vuruşlar arası boşluk)
+    gap_s: 0.7                 # kavga durumu bu kadar süre kesilirse sayaç sıfırlanır (kısa kopmaları tolere eder)
     min_duration_s: 1.0
   fall:
     torso_angle_deg: 60        # gövdenin dikeyle açısı bundan büyükse "yatay"
@@ -110,6 +111,7 @@ audio:
   # dB = dBFS + db_offset. Mikrofona göre kalibre edin: sessiz odada ~35-45, normal konuşmada ~55-65 göstermeli.
   db_offset: 100
   db_min_hops: 2         # eşik art arda bu kadar ölçümde aşılırsa (2 x 0.5 sn = 1 sn) "shout" event'i
+  db_rule_on_files: false  # ses dosyasının seviyesi gerçek ortam gürültüsü değil (ciglik.wav'da film müziği "bağırma" sayıldı)
   # dB eşikleri: bölge tipine ve zamana göre (break = teneffüs, lesson = ders)
   db_thresholds:
     default: {lesson: 70, break: 85}
