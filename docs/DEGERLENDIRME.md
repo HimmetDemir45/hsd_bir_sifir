@@ -64,6 +64,24 @@ kişi en fazla 2 sn yerde görünüyor); şart yalnızca yavaşça uzanmanın al
   Kendi silah kayıtlarımız 0.41 / 0.50 / 0.59 / 0.80: 0.5'te 3/4, 0.4'te 4/4. Kırmızıda insan onayı olduğundan
   kaçırmamak öncelikli: 0.4 korunuyor. Bilinen risk: kantinde konserve açma, havai fişek.
 
+## Canlı kamera kaydı (ekip, test_media/canli.mp4, 185 sn, 1080p)
+Ekibin kendi kamerasıyla çektiği kayıt: maket bıçağı (0-47 sn), koşma (52-61), boğuşma (66-70), itişme/vurma
+(75-145), düşme (149-165), iterek düşürme (166-181). Canlı sistem hızında (14 FPS) kare kare ölçüldü
+(`../hsd_datasets/canli_analiz.py`, `canli_tarama.py`).
+
+| Bölüm | Önceki ayar | Yeni ayar | Neden kaçıyordu |
+|---|---|---|---|
+| Maket bıçağı | ❌ | ❌ | COCO "knife" güveni 0.00; maket bıçağı modellerin bıçak sınıfına benzemiyor (tabanca modeli 0.62 ile "tabanca" sandı, eşik 0.8 olduğu için alarm yok) |
+| Koşma (2 geçiş) | 0 | **2** | kural en az 2 kişi istiyordu, kadrajda tek kişi ~0.7 sn görünüyor -> tek kişi, hız ≥2.0, ≥0.3 sn |
+| Boğuşma / itişme | 0 / 0 | **1 / 4** uyarı | kol hızı ve yakınlık sağlanıyor ama itişme kesik kesik (en uzun 0.7 sn) -> min süre 1.0 -> 0.5 sn |
+| Düşme | ✅ | ✅ | |
+| İterek düşürme | kavga | **kavga + düşme** | kişi yerde 2.4 sn kalıp kalktı -> düşme süresi 3 -> 2 sn |
+
+Yeni ayarın bedeli (kavga veri seti, event bazlı): yakalama %7 -> %12, yanlış kavga %2 -> %3, yanlış koşma %0.
+Kayıtta bıçak/koşma bölümlerinde yanlış kavga/düşme yok; Kavga.mp4 demo senaryosu değişmedi.
+Ayrıca canlı test şunları gösterdi ve düzeltildi: canlı kamera 8 FPS'te işleniyordu (-> 15), laptop önünde kafa
+eğmek "düşme" üretiyordu (kutu oranı yedeği artık yalnız bacaklar görünüyorsa).
+
 ## Silah / bıçak (görüntü)
 Tabanca için [JoaoAssalim/Weapons-and-Knives-Detector-with-YOLOv8](https://github.com/JoaoAssalim/Weapons-and-Knives-Detector-with-YOLOv8)
 modeli (MIT, YOLOv8n) eklendi; bıçak COCO'da kaldı (Joao'nun bıçak sınıfı fotoğraf testinde 1/7). Model dosyası

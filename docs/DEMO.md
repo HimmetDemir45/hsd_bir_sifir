@@ -52,15 +52,18 @@ python main.py --fresh --audio
 3. **dB kalibrasyonu:** `python -m detectors.audio_cls` → normal konuşmada `dB=` 55-65 olmalı; değilse `audio.db_offset`.
 4. **Silah sesi (mikrofondan):** telefondan bir silah sesi efekti çalıp mikrofona tutun → `silah` skoru 0.25 üstüne çıkmalı.
    Fusion kırmızı için `alerts.red.gunshot_min_conf: 0.4` ister; testlerde silah sesleri 0.41-0.80 aldı (hepsi kırmızı).
-5. **Bıçak (webcam):** `python -m detectors.weapon` → mutfak bıçağını kameraya yan tutun. Kutu kırmızı/turuncu ve
-   güven ≥ 0.6 olmalı, konsolda `"type": "knife"`. Düşükse `weapon.min_conf` ve `alerts.red.weapon_min_conf` birlikte düşürülür
-   (yanlış alarm riskini artırır). Tabanca için `models/weapon.pt` gerekir (yoksa sadece bıçak).
-6. **Yanlış alarm:** kamera önünde 2 dk normal oturun/konuşun/yürüyün → kavga/düşme uyarısı gelmemeli.
+5. **Bıçak / tabanca (webcam):** `python -m detectors.weapon` (pose komutu silaha bakmaz). Gerçek **mutfak bıçağını**
+   kameraya yan tutun; **maket bıçağı tanınmıyor** (canlı kayıtta güven 0.00). Tabanca modeli (`models/weapon_guns.pt`,
+   eşik 0.8) net görüntüde çalışıyor; fotoğraf testinde 4/11. Silahı en güvenilir şekilde **silah sesiyle** gösterin.
+6. **Kavga / düşme / koşma:** canli.mp4 kaydıyla ayarlandı (docs/DEGERLENDIRME.md). Kavga için kollar hızlı ve
+   yakın olun; düşmede kendinizi **birden** bırakıp en az **2 sn** yerde kalın (yavaşça uzanmak düşme sayılmaz).
+7. **Yanlış alarm:** kamera önünde 2 dk normal oturun/konuşun/yürüyün → kavga/düşme uyarısı gelmemeli.
 7. **Bulanıklaştırma:** `python -m privacy.blur` → yüz kapanmalı, boyun açık kalmalı (`privacy.head_scale` ile ayar).
 
 ## Bilinen sınırlar (jüri sorarsa dürüstçe)
 
-- Sopa/beyzbol sopası nesne olarak tanınmıyor; saldırı **kavga** (davranış) olarak yakalanıyor.
+- Sopa/beyzbol sopası ve maket bıçağı nesne olarak tanınmıyor; saldırı **kavga** (davranış) olarak yakalanıyor.
+- Kısa itişmeler (0.5 sn'den kısa) ve kadrajdan çok hızlı geçen koşucu kaçabilir (canlı kayıt: kavga 6 uyarı, koşma 2/2).
 - Hareket bulanıklığı ve arkası dönük kişilerde birkaç karelik yüz bulanıklaştırma kaçağı olabilir (kafanın arkası).
 - Ses modelleri hazır (AudioSet) modeller; stüdyo kaydı tek atışlık bazı silah seslerini düşük skorlayabiliyor
   (test: 4 kaydın 3'ü yakalandı). Silah sesi için YAMNet, diğer sesler için EfficientAT kullanılıyor.

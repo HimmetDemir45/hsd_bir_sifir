@@ -139,7 +139,8 @@ def test_fall_survives_pose_flicker(pose_det):
 
 
 def test_running_vs_walking(pose_det, cfg, monkeypatch):
-    fast = [[person(100 + 80 * i, 200), person(100 + 80 * i, 450)] for i in range(10)]
+    # 3 boy/sn (canli.mp4'teki koşu 2.2-3.5); tek kişi de yeterli (min_people 1)
+    fast = [[person(100 + 120 * i, 200)] for i in range(10)]
     assert "running" in [typ for _, typ in run_pose(pose_det, fast)]
     slow_det = PoseDetector(cfg, "cam1", "kantin")
     slow = [[person(100 + 20 * i, 200), person(100 + 20 * i, 450)] for i in range(10)]
