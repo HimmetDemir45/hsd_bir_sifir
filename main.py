@@ -10,8 +10,15 @@ from __future__ import annotations
 
 import argparse
 import queue
+import sys
 import threading
 import time
+
+# Windows'ta çıktı dosyaya/bazı terminallere yönlenince cp1254 kullanılır; emoji/özel karakter
+# print'i UnicodeEncodeError ile thread'leri (ör. fusion) öldürüyordu. Her zaman UTF-8, basılamayan karakter '?'.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
 
 import cv2
 import uvicorn

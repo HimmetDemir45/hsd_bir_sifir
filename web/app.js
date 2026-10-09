@@ -244,16 +244,28 @@ async function loadInitial() {
   }
 }
 
+// Canlı görüntü (MJPEG) sunucu yeniden başlarsa kendiliğinden bağlanmaz: yeniden bağlan
+const camEl = document.getElementById("cam");
+function reconnectVideo() {
+  camEl.src = "/video/cam1?t=" + Date.now();   // önbellek kırıcı: tarayıcı yeni bağlantı açar
+}
+camEl.onerror = () => setTimeout(reconnectVideo, 1500);
+
+let wasDisconnected = false;
 function connect() {
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   const ws = new WebSocket(proto + "//" + location.host + "/ws");
-  ws.onopen = () => { connEl.textContent = "bağlı"; connEl.className = "conn on"; };
+  ws.onopen = () => {
+    connEl.textContent = "bağlı"; connEl.className = "conn on";
+    if (wasDisconnected) { reconnectVideo(); wasDisconnected = false; }
+  };
   ws.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
     if (msg.type === "alert") upsert(msg.alert, true);
   };
   ws.onclose = () => {
     connEl.textContent = "bağlantı yok"; connEl.className = "conn off";
+    wasDisconnected = true;
     setTimeout(connect, 1500);   // sunucu yeniden başlarsa kendiliğinden bağlanır
   };
 }
