@@ -80,19 +80,24 @@ pose:
     limb_speed: 1.5            # bilek/dirsek hızı (kişi boyu / sn)
     hold_s: 0.5                # hızlı hareket bu kadar süre "devam ediyor" sayılır (vuruşlar arası boşluk)
     gap_s: 0.7                 # kavga durumu bu kadar süre kesilirse sayaç sıfırlanır (kısa kopmaları tolere eder)
-    min_duration_s: 1.0
+    min_duration_s: 0.5        # canli.mp4: gerçek itişme kesik kesik, kavga durumu en fazla ~0.7 sn sürüyordu.
+                               # 1.0 -> 0.5: kayıtta kavga 1 -> 6 uyarı; veri seti yakalama %7 -> %12, yanlış %2 -> %3
   fall:
     torso_angle_deg: 60        # gövdenin dikeyle açısı bundan büyükse "yatay"
     aspect_ratio: 1.2          # omuz+kalça görünmüyor ama bacaklar görünüyorsa: kutu genişlik/yükseklik > bu ise "yatay"
-    min_duration_s: 3.0
+    min_duration_s: 2.0        # 3.0'dı: canli.mp4'te iterek düşürülen kişi yerde 2.4 sn kalıp kalktı; UR Fall'da
+                               # yerde kalma 0.4-2.0 sn. Bıçak/koşma/kavga bölümlerinde hiç yatay duruş yok.
     require_sudden: true       # yataya geçiş ani olmalı (yavaşça uzanma düşme sayılmaz; UR Fall değerlendirmesi)
     transition_s: 1.0          # ...yatay olmadan en fazla bu kadar sn önce dik duruyordu
     drop_ratio: 0.15           # ...ve o andan beri kutu merkezi en az bu kadar x boy aşağı indi (UR Fall: aynı yakalamada yanlış alarm %36 -> %14)
     gap_s: 0.5                 # yatay duruş bu kadar kısa kesilirse (duruş titremesi) süre sıfırlanmaz
   running:
-    mean_speed: 1.2            # ortalama keypoint hızı (kişi boyu / sn)
-    min_people: 2
-    min_duration_s: 0.5
+    # canli.mp4: koşan kişi kadrajda tek ve ~0.7 sn görünüyordu (2 kişi şartı ve 0.5 sn hiç sağlanmadı).
+    # Hız 2.0 (1.2 değil): yakın kamerada el sallamak 1.35, itişme 2.19'a kadar çıkıyor. Kayıtta 2/2 koşu,
+    # bıçak/kavga bölümlerinde yanlış koşma yok; kavga veri setinde %0-1.
+    mean_speed: 2.0            # ortalama keypoint hızı (kişi boyu / sn)
+    min_people: 1
+    min_duration_s: 0.3
   crowd:
     min_people: 4
     radius_ratio: 1.5          # kişi boyu cinsinden kümelenme yarıçapı
