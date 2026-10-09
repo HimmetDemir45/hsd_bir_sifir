@@ -263,8 +263,9 @@ section { background: var(--panel); border: 1px solid var(--line); border-radius
 
 .modal-box {
   position: relative;
-  display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(20rem, 1fr);
-  width: min(78rem, 100%); max-height: 100%; overflow: hidden;
+  /* Görüntü sütunu 'auto': görüntünün kendi oranıyla genişler. Dikey video dar, yatay geniş sütun; yanlarda siyah boşluk kalmaz */
+  display: grid; grid-template-columns: auto minmax(22rem, 30rem);
+  max-width: 100%; max-height: 100%; overflow: hidden;
   background: var(--panel); border: 2px solid var(--red); border-radius: var(--radius-lg);
   box-shadow: 0 30px 80px -20px oklch(0 0 0 / 0.8);
   animation: modal-in 0.35s var(--ease-out);
@@ -272,8 +273,12 @@ section { background: var(--panel); border: 1px solid var(--line); border-radius
 @keyframes modal-in { from { transform: scale(0.96); opacity: 0; } }
 
 /* Olay anı */
-.modal-media { position: relative; margin: 0; background: #000; display: grid; min-height: 0; }
-.modal-snap { width: 100%; height: 100%; max-height: calc(100vh - 2 * clamp(0.75rem, 3vw, 2.5rem)); object-fit: contain; display: block; }
+.modal-media { position: relative; margin: 0; background: oklch(0.12 0.01 240); display: grid; place-items: center; min-width: 14rem; min-height: 0; }
+.modal-snap {
+  display: block; width: auto; height: auto;   /* oran korunur, büyük kareler sınırlara kadar küçülür */
+  max-width: min(58vw, 64rem);
+  max-height: calc(100vh - 2 * clamp(0.75rem, 3vw, 2.5rem) - 4px);
+}
 .modal-media-tag {
   position: absolute; left: 0.75rem; bottom: 0.75rem;
   padding: 0.25rem 0.6rem; border-radius: 999px; font-size: var(--fs-xs); font-weight: 600;
@@ -335,8 +340,9 @@ section { background: var(--panel); border: 1px solid var(--line); border-radius
 /* Dar / dikey ekran: görüntü üstte, karar altta */
 @media (max-width: 960px), (max-aspect-ratio: 1/1) {
   .modal { padding: 0.5rem; }
-  .modal-box { grid-template-columns: 1fr; grid-template-rows: minmax(0, 42vh) auto; overflow-y: auto; }
-  .modal-snap { max-height: 42vh; }
+  .modal-box { width: 100%; grid-template-columns: 1fr; grid-template-rows: auto auto; overflow-y: auto; }
+  .modal-media { min-width: 0; }
+  .modal-snap { max-width: 100%; max-height: 42vh; }
   .modal-title { font-size: var(--fs-xl); }
   .modal-body { overflow: visible; }
 }
