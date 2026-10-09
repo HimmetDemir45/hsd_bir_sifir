@@ -40,6 +40,11 @@ class Notifier:
         self._sent: set[tuple[str, str]] = set()  # (alert id, seviye): aynı seviyeyi iki kez bildirme
         self._lock = threading.Lock()
 
+    def reset(self) -> None:
+        """Demo yeniden başlatma: aynı uyarı id/seviyesi yeniden bildirilebilsin."""
+        with self._lock:
+            self._sent.clear()
+
     # --- mesaj metinleri (saf, test edilebilir) ---
     def _zone_name(self, zone_id: str) -> str:
         return self.zones.get(zone_id, {}).get("name", zone_id)

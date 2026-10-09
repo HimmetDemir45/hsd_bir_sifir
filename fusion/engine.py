@@ -30,6 +30,12 @@ class FusionEngine:
         self._dedup: dict[tuple[str, str], tuple[Alert, float]] = {}  # (zone, type) -> (alert, son event ts)
         self._yellows: dict[str, list[float]] = {}  # zone -> sarı uyarıların oluşma zamanları
 
+    def reset(self) -> None:
+        """Dedup ve eskalasyon hafızasını siler (demo yeniden başlatma): yoksa yeni senaryonun uyarıları
+        eski (silinmiş) uyarılarla birleşip hiç görünmezdi."""
+        self._dedup.clear()
+        self._yellows.clear()
+
     # --- tek event işleme (testler doğrudan bunu çağırır) ---
     def process(self, event: Event, crowd_size: int | None = None) -> list[Alert]:
         """Event'i işler; yeni veya güncellenen uyarıları döndürür (aynı zamanda on_alert'e de iletir)."""

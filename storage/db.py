@@ -52,6 +52,11 @@ class Storage:
             self._db.commit()
         return rows
 
+    def clear(self) -> None:
+        """Tüm olay ve uyarıları siler (sadece demo yeniden başlatmada çağrılır)."""
+        self._exec("DELETE FROM alerts")
+        self._exec("DELETE FROM events")
+
     def save_event(self, e: Event) -> None:
         self._exec(
             "INSERT INTO events (source, type, confidence, camera_id, zone_id, ts, snapshot) "

@@ -240,10 +240,10 @@ def main() -> None:
         print(f"[eskalasyon] AÇIK: kırmızı uyarı {int(red_watch.timeout_s)} sn onaylanmazsa ek bildirim "
               "(gerçek arama yok)")
         threads.append(threading.Thread(target=red_timeout_loop, name="red-timeout", daemon=True))
+    demo_ctl = None
     if args.demo:
         frames.set(cam_cfg["id"], _placeholder_jpeg("DEMO modu (sahte olaylar)"))
-        threads.append(threading.Thread(target=demo.feed, args=(events, stop, args.speed),
-                                        name="demo", daemon=True))
+        demo_ctl = demo.DemoController(events, args.speed)  # senaryo thread'ini kendisi başlatır
     else:
         threads.append(threading.Thread(
             target=camera_loop, name="camera", daemon=True,
@@ -253,13 +253,32 @@ def main() -> None:
         threads.append(threading.Thread(target=audio_loop, name="audio", daemon=True,
                                         args=(cfg, cam_cfg["zone_id"], args.audio, events, stop)))
 
-    app = create_app(cfg, storage, frames, hub, notifier)
+    def do_demo_reset() -> None:
+        """Sadece --demo: senaryoyu durdur, kayıtları ve hafızaları temizle, istemcilere bildir, baştan başlat."""
+        demo_ctl.stop()
+        while True:  # kuyrukta kalan eski senaryo olayları
+            try:
+                events.get_nowait()
+            except queue.Empty:
+                break
+        time.sleep(0.4)  # fusion thread'inin elindeki olayı bitirmesi için (get zaman aşımı 0.2 sn)
+        storage.clear()
+        engine.reset()
+        red_watch.reset()
+        notifier.reset()
+        hub.publish_message({"type": "reset"})
+        print("[demo] yeniden başlatıldı", flush=True)
+        demo_ctl.start()
+
+    app = create_app(cfg, storage, frames, hub, notifier, demo_reset=do_demo_reset if demo_ctl else None)
     server = uvicorn.Server(uvicorn.Config(app, host=cfg["api"]["host"], port=cfg["api"]["port"],
                                            log_level="warning"))
     threads.append(threading.Thread(target=server.run, name="api", daemon=True))
 
     for t in threads:
         t.start()
+    if demo_ctl:
+        demo_ctl.start()
     host = cfg["api"]["host"]
     print(f"Dashboard: http://localhost:{cfg['api']['port']}   (çıkış: Ctrl+C)"
           + ("" if host in ("127.0.0.1", "localhost") else f"   [ağdan erişilebilir: {host}]"))
@@ -270,6 +289,8 @@ def main() -> None:
         pass
     finally:
         stop.set()
+        if demo_ctl:
+            demo_ctl.stop()
         server.should_exit = True
         time.sleep(0.5)
 
