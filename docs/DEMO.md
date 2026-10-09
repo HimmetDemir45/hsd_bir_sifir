@@ -14,8 +14,9 @@ bölümünden 4 tabanca + 3 bıçak görüntüsü. Her parçanın üstünde ger�
 Beklenen: normal kliplerde uyarı yok, kavgada 🟠 "Kavga şüphesi" (ekranda `kavga_p` olasılığı), tabanca/bıçakta
 🔴 kırmızı modal. Aynı tip olaylar 30 sn içinde tek kartta birleşir (fusion dedup) — kart sayısı değil, kartın
 gelmesi ve `kavga_p` önemli. Anlatırken `docs/DEGERLENDIRME.md` ÖZET tablosunu ve `docs/gorseller/` grafiklerini
-gösterin: "2489 klipte çapraz doğrulama AUC 0.91; silah modeli ayrılmış testte mAP50 0.87".
-Dürüst not: her klip yakalanmıyor (kavga ~%61, tabanca ~%67 yakalama, yanlış alarm ~%4-5) — tablo bunu söylüyor.
+gösterin: "2489 klipte çapraz doğrulama AUC 0.91; silah modeli ayrılmış testte mAP50 0.84, zor negatiflerle eğitildikten
+sonra 72 görülmemiş kamera klibinde 0 yanlış kırmızı".
+Dürüst not: her klip yakalanmıyor (kavga ~%61 yakalama @%5 yanlış alarm; tabanca %74, bıçak %71 yakalama) — tablo bunu söylüyor.
 
 ## 1. Gerçek detektörlerle hazır senaryo
 
@@ -67,8 +68,8 @@ python main.py --fresh --audio
 4. **Silah sesi (mikrofondan):** telefondan bir silah sesi efekti çalıp mikrofona tutun → `silah` skoru 0.25 üstüne çıkmalı.
    Fusion kırmızı için `alerts.red.gunshot_min_conf: 0.4` ister; testlerde silah sesleri 0.41-0.80 aldı (hepsi kırmızı).
 5. **Bıçak / tabanca (webcam):** `python -m detectors.weapon` (pose komutu silaha bakmaz). Gerçek **mutfak bıçağını**
-   kameraya yan tutun; **maket bıçağı tanınmıyor** (canlı kayıtta güven 0.00). Tabanca modeli (`models/weapon_guns.pt`,
-   eşik 0.8) net görüntüde çalışıyor; fotoğraf testinde 4/11. Silahı en güvenilir şekilde **silah sesiyle** gösterin.
+   kameraya yan tutun; **maket bıçağı tanınmıyor** (canlı kayıtta güven 0.00). Kendi modelimiz (`ml/silah_v2.pt`,
+   eşik 0.6) net görüntüde çalışıyor; fotoğraf testinde 4/11. Silahı en güvenilir şekilde **silah sesiyle** gösterin.
 6. **Kavga / düşme / koşma:** canli.mp4 kaydıyla ayarlandı (docs/DEGERLENDIRME.md). Kavga için kollar hızlı ve
    yakın olun; düşmede kendinizi **birden** bırakıp en az **2 sn** yerde kalın (yavaşça uzanmak düşme sayılmaz).
 7. **Yanlış alarm:** kamera önünde 2 dk normal oturun/konuşun/yürüyün → kavga/düşme uyarısı gelmemeli.

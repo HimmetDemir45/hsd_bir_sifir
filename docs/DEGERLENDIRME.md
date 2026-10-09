@@ -24,17 +24,32 @@ Ekip kaydı canli.mp4 (kameraya çok yakın, sahnelenmiş): boğuşma %17, itiş
 
 ### Silah modeli (YOLO11n, kendi eğitimimiz)
 - **Veri:** Dangerous Items (Zenodo 16422779, CC BY 4.0): 5934 eğitim / 1272 doğrulama / 1272 test görüntüsü,
-  5 sınıf. GPU (RTX 4060) 40 tur, ~40 dk. `tools/silah_egit.py` -> `ml/silah_v1.pt`.
-- **Ayrılmış test seti:** mAP50 0.87 — tabanca P 0.91 R 0.81 mAP50 0.89, tüfek 0.93, bıçak 0.79, pala 0.83,
-  beyzbol sopası 0.93. Grafikler: `docs/gorseller/silah_test_karisiklik_matrisi.png`, `silah_test_pr_egrisi.png`.
-- **Eşik seçimi** (test seti yakalama / 150 silahsız güvenlik kamerası klibinde yanlış kırmızı, 3/5 kare):
-  tabanca 0.65 -> ~%67 / %4; bıçak 0.7 -> %59 / %1.3. COCO'nun bıçak sınıfı aynı test setinde %5 yakalıyordu.
-- **Dış test** (Wikimedia fotoğrafları, eğitim kaynağından farklı): tabanca 4-5/11, bıçak 2/7 — dağılım dışı
-  görüntülerde düşüş var.
+  5 sınıf. GPU (RTX 4060) 40 tur, ~40 dk. `tools/silah_egit.py` -> v1.
+- **v2 = zor negatiflerle ince ayar** (`ml/silah_v2.pt`, sistemde bu kullanılıyor): v1'in hatası gerçek güvenlik
+  kamerasında koyu nesneleri silah sanmasıydı. `tools/negatif_ornek.py` 1032 silahsız kare çıkardı (Surveillance
+  Fight noFight kliplerinin yarısı + 600 RLVS NonViolence), boş etiketle eğitime eklendi; diğer 72 klip yalnızca
+  ölçüm için ayrıldı (eğitimde hiç görülmedi). 11 turda erken durdu.
+- **Ayrılmış test seti:** v2 mAP50 0.84 (v1 0.87). Grafikler (v2): `docs/gorseller/silah_test_karisiklik_matrisi.png`,
+  `silah_test_pr_egrisi.png`.
+- **v1 vs v2** (test seti yakalama | 72 görülmemiş silahsız kamera klibinde yanlış KIRMIZI, 3/5 kare kuralı):
+
+| eşik | v1 tabanca | **v2 tabanca** | v1 bıçak | **v2 bıçak** |
+|---|---|---|---|---|
+| 0.5 | %87 \| 5/72 | %80 \| **0/72** | %82 \| 4/72 | %79 \| **0/72** |
+| 0.6 | %81 \| 3/72 | **%74 \| 0/72** (seçilen) | %75 \| 2/72 | **%71 \| 0/72** (seçilen) |
+| 0.7 | %71 \| 0/72 | %63 \| 0/72 | %66 \| 2/72 | %59 \| 0/72 |
+
+  Önceki ayar (v1, tabanca 0.65 / bıçak 0.7): %79 / 3 yanlış, %66 / 2 yanlış. v2 @0.6 yanlış kırmızıyı sıfırladı,
+  bıçakta yakalamayı da artırdı; bedeli tabancada ~5 puan yakalama. Okulda yanlış kırmızı alarm daha pahalı.
+- **Doğruluğu artırmak için yapılabilecekler:** daha çok gerçek okul kamerası negatifi, okul açısından çekilmiş
+  pozitif örnek (dağılım farkı en büyük sorun), daha büyük model (YOLO11s, GPU varsa), çoklu kare doğrulama.
+- **Dış test** (Wikimedia fotoğrafları, eğitim kaynağından farklı): v2 tabanca 4/11, bıçak 2/7 (@0.5) — dağılım
+  dışı görüntülerde düşüş var.
 
 ### Sunum demosu (`test_media/veri_demo.mp4`, `python -m tools.veri_demo`)
 Eğitimde görülmemiş 12 güvenlik kamerası klibi + silah veri setinin TEST görüntüleri, üstünde gerçek etiket.
-Klip bazında: kavga 3/6, normal 6/6 (yanlış alarm yok), tabanca 1/4, bıçak 2/3 — ölçülen başarıyla tutarlı.
+Klip bazında (v2): kavga 2-3/6, normal 6/6 (yanlış alarm yok), tabanca 1/4, bıçak 3/3 — ölçülen başarıyla tutarlı.
+Arka arkaya kavga klipleri detektörün 3 sn bekleme süresine takılabiliyor (p ≥ eşik ama yeni event yok).
 
 ---
 
