@@ -7,6 +7,7 @@ general:
   target_fps: 8          # işleme hızı üst sınırı
   torch_threads: 4       # CPU çekirdek sınırı (0 = sınırsız). 8 -> 21 FPS / 8.2 çekirdek, 4 -> 16 FPS / 4.6 çekirdek
   max_frame_side: 960    # kare okunur okunmaz uzun kenarı bu piksele küçültülür (0 = kapalı); büyük videolarda FPS'i artırır
+  reconnect_s: 3         # webcam/RTSP bu kadar sn kare vermezse yeniden açılır (0 = kapalı)
   snapshot_dir: snapshots
   clip_dir: clips
   clip_pre_ratio: 0.5    # klibin ne kadarı uyarıdan ÖNCE (0.5 -> 10 sn klipte 5 sn önce + 5 sn sonra)
@@ -144,7 +145,8 @@ alerts:
   dedup_window_s: 30           # aynı bölge + aynı tip bu süre içinde tek uyarı
   auto_escalate_red:
     enabled: false             # İLKE: polis bildirimi otomatik değil. Varsayılan KAPALI.
-    timeout_s: 120
+    timeout_s: 120             # açıkken: kırmızı uyarı bu sürede onaylanmazsa SADECE ek bildirim + ekranda uyarı
+                               # (gerçek arama / polis bildirimi YOK; karar yine insanda)
 
 # Kime bildirim gider (rol bazlı)
 recipients:
@@ -170,10 +172,10 @@ privacy:
   persist_s: 0.5          # son bu kadar sn'de bulunan bölgeler de kapatılır (1-2 kare algılanmayan kişi için)
 
 api:
-  host: 0.0.0.0
+  host: 127.0.0.1        # demo güvenliği: sadece bu bilgisayar. Telefondan göstermek için: python main.py --host 0.0.0.0
   port: 8000
 
 telegram:
-  enabled: false
+  enabled: true
   bot_token: ${TELEGRAM_BOT_TOKEN}
   chat_id: ${TELEGRAM_CHAT_ID}

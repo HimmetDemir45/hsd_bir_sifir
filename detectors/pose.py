@@ -104,6 +104,10 @@ class PoseDetector:
         # Yüz bulanıklaştırma için düşük güvenli kişiler de (kısmen kapanmış, kalabalıkta) lazım
         self.privacy_conf: float = cfg.get("privacy", {}).get("person_conf", self.cfg["person_conf"])
         self.privacy_persons: list[Person] = []
+        self.reset()
+
+    def reset(self) -> None:
+        """Takip ve kural durumunu sıfırlar (model yeniden yüklenmez). Yeni kaynak / değerlendirme klibi için."""
         self.tracks: dict[int, Track] = {}
         self._next_id = 1
         self._frame_idx = 0
@@ -216,7 +220,7 @@ class PoseDetector:
             camera_id=self.camera_id,
             zone_id=self.zone_id,
             ts=now,
-            snapshot=None,  # M3: yüzü bulanıklaştırılmış snapshot (privacy/blur.py) eklenecek
+            snapshot=None,  # snapshot uyarı seviyesinde main.py alır (bulanık yayın karesinden)
         )
         if self.out_queue is not None:
             self.out_queue.put(event)

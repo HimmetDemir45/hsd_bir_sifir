@@ -77,7 +77,7 @@ Kapalıyken veya internet yokken mesajlar sadece konsola yazılır; sistem çal�
 **Sunum öncesi kontrol listesi**
 - [ ] `python -m tools.modelleri_indir` "tüm modeller hazır" diyor (internet varken)
 - [ ] `main.py` açılışında `[privacy] UYARI` satırı YOK (varsa YuNet inmemiş, yüzler kaçabilir)
-- [ ] `python -m pytest tests -q` hepsi geçiyor
+- [ ] `python -m pytest tests -q` hepsi geçiyor (pytest geliştirme bağımlılığı: `pip install pytest`; testler model dosyası istemez)
 - [ ] `python main.py --demo --fresh` ile kırmızıya kadar gidip Onayla denendi
 - [ ] Alarm sesi butonu tıklandı, hoparlör açık
 - [ ] Dashboard internetsiz açılıyor (CDN yok, her şey `web/` içinde)

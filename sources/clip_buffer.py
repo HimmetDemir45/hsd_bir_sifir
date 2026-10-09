@@ -53,8 +53,9 @@ class ClipBuffer:
             return
         with self._cond:
             self._frames.append((ts, jpeg.tobytes()))
-            # bekleyen save()'ler için olay öncesi + sonrası + pay kadar geçmiş tut
-            while self._frames and self._frames[0][0] < ts - self.seconds - 2.0:
+            # Bekleyen save()'ler için geçmiş: olay öncesi + sonrası + pay. Pay geniş tutuldu: save() thread'i
+            # gecikirse olay öncesi kareler silinip klibin başı eksik kalıyordu (test: 150 yerine 132 kare).
+            while self._frames and self._frames[0][0] < ts - self.seconds - self.post - 5.0:
                 self._frames.popleft()
             self._cond.notify_all()
 

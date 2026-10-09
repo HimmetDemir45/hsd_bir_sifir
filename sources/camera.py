@@ -16,7 +16,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from core.config import resolve_path
+from core.config import load_config, resolve_path
 
 
 def parse_source(source: str | int) -> str | int:
@@ -32,16 +32,15 @@ def parse_source(source: str | int) -> str | int:
 
 
 class Camera:
-    def __init__(self, source: str | int, loop_file: bool = False, realtime: bool = True) -> None:
+    def __init__(self, source: str | int, loop_file: bool = False, realtime: bool = True,
+                 reconnect_s: float | None = None) -> None:
         self.source = parse_source(source)
         self.is_file = isinstance(self.source, str) and Path(self.source).is_file()
         self.loop_file = loop_file
         self.realtime = realtime
-        if isinstance(self.source, int):
-            # Windows'ta DirectShow, varsayılan MSMF'den çok daha hızlı açılır
-            self.cap = cv2.VideoCapture(self.source, cv2.CAP_DSHOW)
-        else:
-            self.cap = cv2.VideoCapture(self.source)
+        # canlı kaynakta (webcam/RTSP) bu kadar sn kare gelmezse kamera yeniden açılır
+        self.reconnect_s = (load_config()["general"]["reconnect_s"] if reconnect_s is None else reconnect_s)
+        self.cap = self._open()
         if not self.cap.isOpened():
             raise RuntimeError(f"Kamera kaynağı açılamadı: {source!r}")
 
@@ -56,12 +55,43 @@ class Camera:
             self._thread = threading.Thread(target=self._reader, daemon=True)
             self._thread.start()
 
+    def _open(self) -> cv2.VideoCapture:
+        if isinstance(self.source, int):
+            # Windows'ta DirectShow, varsayılan MSMF'den çok daha hızlı açılır
+            return cv2.VideoCapture(self.source, cv2.CAP_DSHOW)
+        return cv2.VideoCapture(self.source)
+
+    def _reconnect(self, backoff: float) -> bool:
+        print(f"[camera] {self.reconnect_s:.0f} sn kare yok -> yeniden bağlanılıyor: {self.source!r}", flush=True)
+        self.cap.release()
+        time.sleep(backoff)
+        cap = self._open()
+        if cap.isOpened():
+            self.cap = cap
+            print("[camera] yeniden bağlandı", flush=True)
+            return True
+        cap.release()
+        return False
+
     def _reader(self) -> None:
+        """Canlı kaynak: sürekli oku, sadece son kareyi tut. Kamera koparsa (USB çıktı, RTSP düştü)
+        reconnect_s sonra yeniden aç; başarısızsa artan aralıklarla (en fazla 10 sn) tekrar dene."""
+        fail_since: float | None = None
+        backoff = min(1.0, self.reconnect_s)
         while not self._stopped:
             ok, frame = self.cap.read()
             if not ok:
-                time.sleep(0.05)
+                now = time.time()
+                fail_since = fail_since or now
+                if self.reconnect_s > 0 and now - fail_since >= self.reconnect_s:
+                    if self._reconnect(backoff):
+                        fail_since, backoff = None, min(1.0, self.reconnect_s)
+                    else:
+                        backoff = min(backoff * 2, 10.0)
+                else:
+                    time.sleep(0.05)
                 continue
+            fail_since = None
             with self._lock:
                 self._frame = frame
                 self._frame_ts = time.time()
