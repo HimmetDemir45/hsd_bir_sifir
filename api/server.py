@@ -94,8 +94,8 @@ def create_app(cfg: dict[str, Any], storage: Storage, frames: FrameStore, hub: H
     def alerts(limit: int = 100) -> list[dict]:
         return storage.list_alerts(limit)
 
-    @app.get("/api/mode")
-    def mode() -> dict:
+    @app.get("/api/status")
+    def status() -> dict:
         return {"demo": demo_reset is not None}
 
     @app.post("/api/demo/reset")
