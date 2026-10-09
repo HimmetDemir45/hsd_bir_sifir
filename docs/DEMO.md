@@ -3,7 +3,21 @@
 Üç seçenek, güvenilirden etkileyiciye. Sunumda **önce 1'i** gösterin; zaman ve koşullar uygunsa 3'ü ekleyin.
 2 her zaman yedekte açık dursun (bir şey bozulursa ona geçin).
 
-## 1. Gerçek detektörlerle hazır senaryo (önerilen ana demo)
+## 0. Veri seti demosu — eğitilmiş modeller (ANA DEMO)
+
+```bash
+python main.py --fresh --source test_media/veri_demo.mp4
+```
+`test_media/veri_demo.mp4` (69 sn, `python -m tools.veri_demo` ile üretilir, git'te yok -> kopyalayın):
+eğitimde **hiç görülmemiş** 6 normal + 6 kavga güvenlik kamerası klibi, sonra silah veri setinin TEST
+bölümünden 4 tabanca + 3 bıçak görüntüsü. Her parçanın üstünde gerçek etiket yazar.
+Beklenen: normal kliplerde uyarı yok, kavgada 🟠 "Kavga şüphesi" (ekranda `kavga_p` olasılığı), tabanca/bıçakta
+🔴 kırmızı modal. Aynı tip olaylar 30 sn içinde tek kartta birleşir (fusion dedup) — kart sayısı değil, kartın
+gelmesi ve `kavga_p` önemli. Anlatırken `docs/DEGERLENDIRME.md` ÖZET tablosunu ve `docs/gorseller/` grafiklerini
+gösterin: "2489 klipte çapraz doğrulama AUC 0.91; silah modeli ayrılmış testte mAP50 0.87".
+Dürüst not: her klip yakalanmıyor (kavga ~%61, tabanca ~%67 yakalama, yanlış alarm ~%4-5) — tablo bunu söylüyor.
+
+## 1. Gerçek detektörlerle hazır senaryo
 
 ```bash
 python main.py --fresh --source test_media/Kavga.mp4 --audio test_media/demo_ses.wav

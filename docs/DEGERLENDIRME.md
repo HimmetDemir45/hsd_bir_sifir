@@ -1,5 +1,43 @@
 # Veri setiyle değerlendirme (2026-10-09)
 
+## ÖZET: Öğrenilmiş modeller (sunumda gösterilecek)
+
+### Kavga modeli (iskelet tabanlı; yüz/görüntü kullanılmaz)
+- **Veri:** 2489 klip (1244 kavga / 1245 normal) — Surveillance Camera Fight 300 (güvenlik kamerası),
+  Movies Fights 201, Real Life Violence Situations 2000 (Kaggle). 12 klip sunum demosu için eğitimden ayrıldı.
+- **Yöntem:** YOLO11n-pose iskeletleri, 1.5 sn pencerelerde 46 etkileşim özelliği (en yakın çift mesafesi ve
+  yaklaşma hızı, bileğin karşı kişiye uzaklığı, kol hızı/ivmesi, kutu çakışması...) `ml/pose_features.py`;
+  eğitim (`tools/kavga_egit.py`) ve canlı sistem AYNI kodu kullanır.
+- **Ölçüm:** klip bazlı 5 katlı çapraz doğrulama (aynı klibin pencereleri hem eğitim hem testte olamaz).
+
+| model | veri | AUC | doğruluk | yakalama@0.5 | **%5 yanlış alarmda yakalama** |
+|---|---|---|---|---|---|
+| eski kural (yakınlık + kol hızı) | — | — | — | %12 (yanlış %3) | — |
+| lojistik regresyon | 300 klip | 0.81 | %71 | %73 | %40 |
+| lojistik regresyon | 2489 klip | 0.87 | %77 | %92 | %36 |
+| random forest | 2489 klip | 0.91 | %78 | %96 | %62 |
+| **gradient boosting (seçilen)** | 2489 klip | **0.91** | %78 | %96 | **%61** |
+
+Gerçek dünya (eğitimde hiç kullanılmadı): Kavga.mp4 arbede pencerelerinin %74'ü kavga, sakin bölüm %0.
+Ekip kaydı canli.mp4 (kameraya çok yakın, sahnelenmiş): boğuşma %17, itişme %2 pencere — veri setinden
+çok farklı ortamda genelleme zayıf (bilinen sınır).
+
+### Silah modeli (YOLO11n, kendi eğitimimiz)
+- **Veri:** Dangerous Items (Zenodo 16422779, CC BY 4.0): 5934 eğitim / 1272 doğrulama / 1272 test görüntüsü,
+  5 sınıf. GPU (RTX 4060) 40 tur, ~40 dk. `tools/silah_egit.py` -> `ml/silah_v1.pt`.
+- **Ayrılmış test seti:** mAP50 0.87 — tabanca P 0.91 R 0.81 mAP50 0.89, tüfek 0.93, bıçak 0.79, pala 0.83,
+  beyzbol sopası 0.93. Grafikler: `docs/gorseller/silah_test_karisiklik_matrisi.png`, `silah_test_pr_egrisi.png`.
+- **Eşik seçimi** (test seti yakalama / 150 silahsız güvenlik kamerası klibinde yanlış kırmızı, 3/5 kare):
+  tabanca 0.65 -> ~%67 / %4; bıçak 0.7 -> %59 / %1.3. COCO'nun bıçak sınıfı aynı test setinde %5 yakalıyordu.
+- **Dış test** (Wikimedia fotoğrafları, eğitim kaynağından farklı): tabanca 4-5/11, bıçak 2/7 — dağılım dışı
+  görüntülerde düşüş var.
+
+### Sunum demosu (`test_media/veri_demo.mp4`, `python -m tools.veri_demo`)
+Eğitimde görülmemiş 12 güvenlik kamerası klibi + silah veri setinin TEST görüntüleri, üstünde gerçek etiket.
+Klip bazında: kavga 3/6, normal 6/6 (yanlış alarm yok), tabanca 1/4, bıçak 2/3 — ölçülen başarıyla tutarlı.
+
+---
+
 Detektörler, hiç ayar yapılmamış **dış veri setlerinde** ölçüldü: yakalama oranı (TPR: gerçek olayların yüzde kaçı
 bulundu) ve yanlış alarm oranı (FPR: normal sahnelerin yüzde kaçında boşuna uyarı). Tekrar üretmek için:
 

@@ -26,3 +26,6 @@ clips/
 # Demo medyası büyükse ekleme
 test_media/*
 !test_media/.gitkeep
+
+# ultralytics değerlendirme çıktıları
+runs/
