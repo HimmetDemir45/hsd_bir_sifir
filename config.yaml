@@ -146,6 +146,19 @@ recipients:
 privacy:
   blur_faces: true
   record_clips_for: [orange, red]
+  # Yüz bulanıklaştırma (TANIMA YOK: sadece yerini bulup pikselleştirir). İki kaynağın birleşimi:
+  # 1) poz keypoint'lerinden kafa bölgesi (burun/göz/kulak; yoksa omuzların üstü)
+  # 2) yüz dedektörü (YuNet; model yoksa OpenCV Haar) -> pozun kaçırdığı yüzler için
+  face_model: models/face_detection_yunet_2023mar.onnx
+  face_conf: 0.3          # düşük tut: kaçırmak, fazla bulanıklaştırmaktan kötü
+  person_conf: 0.1        # poz kafa bölgesi için kişi eşiği (kurallardaki pose.person_conf'tan bağımsız).
+                          # Kavga.mp4'te kalabalıkta/yandan görünen kişiler 0.12-0.23 güvenle geliyordu.
+  face_max_side: 640      # yüz dedektörü bu boyuta küçültülmüş karede çalışır (hız)
+  head_scale: 1.0         # poz kafa kutusu çarpanı (yüz açıkta kalıyorsa büyütün)
+  top_band: 0.18          # ayakta duran kişide kutunun üstten bu oranı da bulanıklaştırılır (keypoint kayarsa yedek)
+  pad: 0.1                # her kutuya eklenen kenar payı (kısa kenarın oranı)
+  pixel_blocks: 8         # kutu en fazla bu kadar bloğa pikselleştirilir (küçük = daha bulanık)
+  persist_s: 0.5          # son bu kadar sn'de bulunan bölgeler de kapatılır (1-2 kare algılanmayan kişi için)
 
 api:
   host: 0.0.0.0

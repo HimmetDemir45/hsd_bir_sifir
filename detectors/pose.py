@@ -99,6 +99,9 @@ class PoseDetector:
         model_path.parent.mkdir(parents=True, exist_ok=True)
         self.model = YOLO(str(model_path))  # yoksa models/ altına otomatik iner
 
+        # Yüz bulanıklaştırma için düşük güvenli kişiler de (kısmen kapanmış, kalabalıkta) lazım
+        self.privacy_conf: float = cfg.get("privacy", {}).get("person_conf", self.cfg["person_conf"])
+        self.privacy_persons: list[Person] = []
         self.tracks: dict[int, Track] = {}
         self._next_id = 1
         self._frame_idx = 0
@@ -110,10 +113,14 @@ class PoseDetector:
 
     # ---------- algılama ----------
     def detect(self, frame: np.ndarray) -> list[Person]:
+        """Kurallar için person_conf üstü kişileri döndürür. Gizlilik için daha düşük eşikteki
+        (privacy.person_conf) tüm kişiler ayrıca self.privacy_persons'a yazılır (aynı model çağrısı)."""
         result = self.model.predict(
-            frame, imgsz=self.imgsz, conf=self.cfg["person_conf"], device=self.device, verbose=False
+            frame, imgsz=self.imgsz, conf=min(self.cfg["person_conf"], self.privacy_conf),
+            device=self.device, verbose=False,
         )[0]
         if result.keypoints is None or len(result.boxes) == 0:
+            self.privacy_persons = []
             return []
         kps = result.keypoints.xy.cpu().numpy()
         kpc = result.keypoints.conf
@@ -122,7 +129,8 @@ class PoseDetector:
         for i, box in enumerate(result.boxes):
             x1, y1, x2, y2 = (int(v) for v in box.xyxy[0].tolist())
             persons.append(Person((x1, y1, x2, y2), float(box.conf), kps[i], kpc[i]))
-        return persons
+        self.privacy_persons = persons
+        return [p for p in persons if p.conf >= self.cfg["person_conf"]]
 
     # ---------- takip + hız ----------
     def _update_tracks(self, persons: list[Person], now: float) -> list[Track]:

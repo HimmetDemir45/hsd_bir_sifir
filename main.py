@@ -72,7 +72,8 @@ def camera_loop(cfg: dict, cam_cfg: dict, source: str, events: "queue.Queue[Even
             weapon.draw(frame, w_dets)
             pose.draw(frame, tracks)
             if blur_faces is not None:
-                frame = blur_faces(frame)  # yayın ve snapshot'tan ÖNCE (gizlilik ilkesi)
+                # pose.privacy_persons: düşük güvenli kişiler dahil (kalabalıkta yarım görünen yüzler)
+                frame = blur_faces(frame, pose.privacy_persons)  # yayın ve snapshot'tan ÖNCE (gizlilik ilkesi)
             if clip_buf is not None:
                 clip_buf.add(frame, camera.last_ts)  # sadece bulanık kareler
             ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
