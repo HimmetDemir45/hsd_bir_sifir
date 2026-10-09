@@ -238,12 +238,43 @@ section { background: var(--panel); border: 1px solid var(--line); border-radius
 }
 
 /* ---------- Kat planı + haftalık özet ---------- */
-#plan { width: 100%; height: auto; border-radius: var(--radius-sm); background: #f5f3ee; display: block; }
-#weekly { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
-#weekly th, #weekly td { padding: 0.5rem 0.4rem; text-align: center; border-bottom: 1px solid var(--line); }
-#weekly th:first-child, #weekly td:first-child { text-align: left; }
-#weekly .y { color: var(--yellow); } #weekly .o { color: var(--orange); } #weekly .r { color: var(--red-ink); }
-#weekly td.empty { color: var(--muted); text-align: left; }
+.panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem 1rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.panel-head h2 { margin: 0; }
+.panel-meta { font-size: var(--fs-xs); color: var(--muted); }
+.panel-note { margin: 0.6rem 0 0; font-size: var(--fs-xs); color: var(--muted); }
+
+/* Isı ölçeği: app.js'teki dolgu ile aynı (hsl 55 → 0, opaklık 0.25 → 0.8), planın kağıt rengi üstünde */
+.heat-legend { display: flex; align-items: center; gap: 0.45rem; font-size: var(--fs-xs); color: var(--muted); }
+.heat-bar {
+  width: 7rem; height: 0.6rem; border-radius: 999px;
+  background:
+    linear-gradient(90deg, hsla(55, 95%, 50%, 0.25), hsla(41, 95%, 50%, 0.39), hsla(28, 95%, 50%, 0.52), hsla(14, 95%, 50%, 0.66), hsla(0, 95%, 50%, 0.8)),
+    #f5f3ee;
+  box-shadow: inset 0 0 0 1px oklch(0 0 0 / 0.25);
+}
+
+/* Plan bir "kağıt" gibi koyu panele oturur; tuval JS ile çizilir, burada sadece ölçeklenir */
+.plan-frame { padding: 0.5rem; border-radius: var(--radius); background: #f5f3ee; box-shadow: inset 0 0 0 1px oklch(0 0 0 / 0.08), 0 6px 18px -10px oklch(0 0 0 / 0.7); }
+#plan { width: 100%; height: auto; display: block; border-radius: var(--radius-sm); background: #f5f3ee; }
+
+/* Haftalık özet: seviye sütunları ince renk bandıyla ayrılır, sayılar büyük ve hizalı */
+.weekly-panel { display: flex; flex-direction: column; }
+#weekly { width: 100%; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
+#weekly th { padding: 0.5rem 0.6rem; font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+#weekly th:first-child { text-align: left; }
+#weekly th.y::before, #weekly th.o::before, #weekly th.r::before { content: ""; display: inline-block; width: 0.5rem; height: 0.5rem; margin-right: 0.4rem; border-radius: 50%; vertical-align: 0.05em; }
+#weekly th.y { color: var(--yellow); } #weekly th.y::before { background: var(--yellow); }
+#weekly th.o { color: var(--orange); } #weekly th.o::before { background: var(--orange); }
+#weekly th.r { color: var(--red-ink); } #weekly th.r::before { background: var(--red); }
+
+#weekly td { padding: 0.65rem 0.6rem; font-size: var(--fs-lg); font-weight: 600; text-align: right; border-bottom: 1px solid var(--line); }
+#weekly td:first-child { text-align: left; font-size: var(--fs-md); font-weight: 600; color: var(--text); }
+#weekly td:nth-child(2) { background: var(--yellow-soft); }
+#weekly td:nth-child(3) { background: var(--orange-soft); }
+#weekly td:nth-child(4) { background: var(--red-soft); }
+#weekly tbody tr:last-child td { border-bottom: 0; }
+#weekly tbody tr:hover td:first-child { color: var(--focus); }
+#weekly td.empty { padding: 1.5rem 0.6rem; text-align: left; font-size: var(--fs-sm); font-weight: 400; color: var(--muted); background: none; }
 
 /* ---------- Kırmızı uyarı modalı ----------
    Ekrandaki en baskın öğe: koyu kırmızı perde + kenarlardan nabız atan kırmızı ışık.
