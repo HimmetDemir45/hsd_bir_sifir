@@ -122,6 +122,15 @@ def test_slow_lying_down_is_not_fall(pose_det):
     assert "fall" not in [typ for _, typ in run_pose(pose_det, frames)]
 
 
+def test_head_bow_upper_body_is_not_horizontal(pose_det):
+    # laptop kamerası: sadece kafa+omuz görünüyor (kalça/bacak yok), kafa eğilince kutu genişliyor -> yatay DEĞİL
+    kps = np.zeros((17, 2), np.float32)
+    kpc = np.zeros(17, np.float32)
+    kpc[[0, 1, 2, 3, 4, 5, 6]] = 0.9
+    wide_box = Person((0, 200, 400, 400), 0.9, kps, kpc)   # genişlik/yükseklik = 2.0
+    assert not pose_det._is_horizontal(wide_box)
+
+
 def test_fall_survives_pose_flicker(pose_det):
     # yatayken tek karelik "dik" titremesi süreyi sıfırlamamalı (gap_s)
     frames = [[person(300, 300)] if i < 2 or i == 8 else [person(300, 380, horizontal=True)] for i in range(25)]

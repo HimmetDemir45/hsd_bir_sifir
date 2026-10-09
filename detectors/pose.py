@@ -37,6 +37,7 @@ from detectors import apply_thread_limit
 # COCO keypoint indeksleri
 L_SH, R_SH, L_EL, R_EL, L_WR, R_WR, L_HIP, R_HIP = 5, 6, 7, 8, 9, 10, 11, 12
 LIMBS = (L_EL, R_EL, L_WR, R_WR)
+LEGS = (13, 14, 15, 16)  # dizler, ayak bilekleri
 SKELETON = [(5, 7), (7, 9), (6, 8), (8, 10), (5, 6), (5, 11), (6, 12), (11, 12),
             (11, 13), (13, 15), (12, 14), (14, 16), (0, 5), (0, 6)]
 
@@ -192,14 +193,23 @@ class PoseDetector:
         return active
 
     def _is_horizontal(self, p: Person) -> bool:
+        """Omuz-kalça ekseni dikeyle torso_angle_deg'den büyük açı yapıyorsa yatay. Gövde noktaları yoksa
+        kutu oranına bakılır, ama yalnız bacaklar görünüyorsa: laptop kamerasında sadece kafa+omuz görünürken
+        kafa eğmek kutuyu genişletip "düşme" üretiyordu (canlı test). Bedeli: UR Fall 1 sn'de %40 -> %33 yakalama."""
         kp_conf = self.cfg["kp_conf"]
+        # İki omuz + iki kalça gerekli: tek taraftan (1 omuz + 1 kalça) açı hesaplamak UR Fall'da
+        # yanlış alarmı artırdı (1 sn: %40/%7 -> %33/%14).
         if all(p.kpc[i] >= kp_conf for i in (L_SH, R_SH, L_HIP, R_HIP)):
             sh = (p.kps[L_SH] + p.kps[R_SH]) / 2
             hip = (p.kps[L_HIP] + p.kps[R_HIP]) / 2
             dx, dy = abs(hip[0] - sh[0]), abs(hip[1] - sh[1])
             return math.degrees(math.atan2(dx, dy + 1e-6)) > self.cfg["fall"]["torso_angle_deg"]
-        x1, y1, x2, y2 = p.box
-        return (x2 - x1) / max(y2 - y1, 1) > self.cfg["fall"]["aspect_ratio"]
+        # Kutu oranı yedeği yalnız bacaklar görünüyorsa (tam vücut kadrajda): UR Fall'da yerde yatan kişinin
+        # gövde noktaları zayıf olabiliyor. Yalnız kafa+omuz görünürken (laptop kamerası) kullanılmaz.
+        if any(p.kpc[i] >= kp_conf for i in LEGS):
+            x1, y1, x2, y2 = p.box
+            return (x2 - x1) / max(y2 - y1, 1) > self.cfg["fall"]["aspect_ratio"]
+        return False
 
     def crowd_size(self, tracks: list[Track]) -> int:
         """En kalabalık kümedeki kişi sayısı (yarıçap = kişi boyu * radius_ratio)."""
