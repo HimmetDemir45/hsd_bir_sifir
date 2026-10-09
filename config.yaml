@@ -175,6 +175,6 @@ api:
   port: 8000
 
 telegram:
-  enabled: false
+  enabled: true
   bot_token: ${TELEGRAM_BOT_TOKEN}
   chat_id: ${TELEGRAM_CHAT_ID}
