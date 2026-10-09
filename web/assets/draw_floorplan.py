@@ -20,16 +20,18 @@ from PIL import Image, ImageDraw, ImageFont
 
 S = 3                      # süper örnekleme (kenar yumuşatma için 3x çiz, sonra küçült)
 W, H = 760, 500
-PAPER = (245, 243, 238)    # style.css .plan-frame ile aynı
-WALL = (70, 72, 76)
-INNER = (110, 112, 116)
-FURN = (200, 195, 185)
-FURN_FILL = (233, 230, 223)
-LABEL = (128, 123, 114)
-GRASS = (226, 234, 216)
-TREE = (196, 214, 182)
-TREE_LINE = (150, 172, 138)
-PATH = (234, 228, 214)
+# Arduvaz paleti (koyu tema). app.js yazıları #222 ve çizgileri #555 çizer: kâğıt, #222'nin
+# okunacağı kadar açık (>= 5:1), koyu arayüzde parlamayacak kadar koyu.
+PAPER = (150, 154, 162)    # style.css .plan-frame ile aynı (#969aa2)
+WALL = (26, 28, 33)
+INNER = (44, 47, 54)
+FURN = (112, 116, 125)
+FURN_FILL = (138, 142, 150)
+LABEL = (38, 41, 47)
+GRASS = (128, 146, 130)
+TREE = (112, 132, 114)
+TREE_LINE = (84, 102, 88)
+PATH = (160, 162, 166)
 
 FONT_PATH = "C:/Windows/Fonts/bahnschrift.ttf"
 
@@ -157,7 +159,7 @@ for x1, x2, _ in rooms[:2]:
             rect(x1 + 58 + c_ * 20, 138 + r_ * 12, x1 + 74 + c_ * 20, 144 + r_ * 12, r=1)
 
 # ---------------- Spor salonu (50,220)-(400,450) ----------------
-COURT = (214, 208, 196)
+COURT = (120, 124, 132)
 cx0, cy0, cx1, cy1 = 72, 240, 378, 430
 d.rectangle(P(cx0, cy0, cx1, cy1), outline=COURT, width=round(1.4 * S))
 mid = (cx0 + cx1) / 2
