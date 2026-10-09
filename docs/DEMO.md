@@ -51,7 +51,7 @@ python main.py --fresh --audio
    (varsayılan "WO Mic" telefon uygulaması olabilir).
 3. **dB kalibrasyonu:** `python -m detectors.audio_cls` → normal konuşmada `dB=` 55-65 olmalı; değilse `audio.db_offset`.
 4. **Silah sesi (mikrofondan):** telefondan bir silah sesi efekti çalıp mikrofona tutun → `silah` skoru 0.25 üstüne çıkmalı.
-   Not: fusion kırmızı için `alerts.red.gunshot_min_conf` (şu an 0.5) ister; testlerde silah sesleri 0.41-0.80 aldı.
+   Fusion kırmızı için `alerts.red.gunshot_min_conf: 0.4` ister; testlerde silah sesleri 0.41-0.80 aldı (hepsi kırmızı).
 5. **Bıçak (webcam):** `python -m detectors.weapon` → mutfak bıçağını kameraya yan tutun. Kutu kırmızı/turuncu ve
    güven ≥ 0.6 olmalı, konsolda `"type": "knife"`. Düşükse `weapon.min_conf` ve `alerts.red.weapon_min_conf` birlikte düşürülür
    (yanlış alarm riskini artırır). Tabanca için `models/weapon.pt` gerekir (yoksa sadece bıçak).

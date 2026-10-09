@@ -132,7 +132,7 @@ audio:
 alerts:
   red:
     weapon_min_conf: 0.6
-    gunshot_min_conf: 0.5
+    gunshot_min_conf: 0.4   # testte silah sesleri 0.41-0.80; cam kırılması YAMNet 0.20
   orange:
     scream_crowd_min_people: 4
     clip_seconds: 10
