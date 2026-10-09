@@ -70,7 +70,8 @@ def _placeholder_jpeg(text: str) -> bytes:
 
 
 def create_app(cfg: dict[str, Any], storage: Storage, frames: FrameStore, hub: Hub,
-               notifier: Any | None = None, demo_reset: Callable[[], None] | None = None) -> FastAPI:
+               notifier: Any | None = None, demo_reset: Callable[[], None] | None = None,
+               level_source: Callable[[], dict | None] | None = None) -> FastAPI:
     app = FastAPI(title="OkulKalkan")
     waiting = _placeholder_jpeg("Kamera bekleniyor...")
 
@@ -98,6 +99,12 @@ def create_app(cfg: dict[str, Any], storage: Storage, frames: FrameStore, hub: H
     def status() -> dict:
         return {"demo": demo_reset is not None}
 
+    @app.get("/api/level")
+    def level() -> dict:
+        """Canlı ses seviyesi. Ses dedektörü yoksa (--demo, --audio verilmedi) available=false."""
+        data = level_source() if level_source else None
+        return {"available": False} if data is None else {"available": True, **data}
+
     @app.post("/api/demo/reset")
     def reset_demo() -> dict:
         # Sadece --demo modunda: gerçek kamera/ses çalışırken kayıtlar ASLA silinmez.
@@ -113,7 +120,8 @@ def create_app(cfg: dict[str, Any], storage: Storage, frames: FrameStore, hub: H
             raise HTTPException(404, "Uyarı bulunamadı")
         alert = storage.update_alert_status(alert_id, status)
         hub.publish(alert)
-        if notifier and status == "confirmed" and before["status"] != "confirmed":
+        # "112 arandı (simülasyon)" mesajı SADECE kırmızıda; turuncu/sarıdaki "Gördüm" bildirim göndermez
+        if notifier and status == "confirmed" and before["status"] != "confirmed" and alert["level"] == "red":
             notifier.send_confirmation(alert)  # Telegram'a "112 arandı (simülasyon)" + sınıfta kalın
         return alert
 
@@ -128,6 +136,10 @@ def create_app(cfg: dict[str, Any], storage: Storage, frames: FrameStore, hub: H
     @app.get("/api/summary/weekly")
     def weekly() -> dict:
         return storage.weekly_summary(time.time() - WEEK_S)
+
+    @app.get("/api/summary/false-alarms")
+    def false_alarms() -> dict:
+        return storage.false_alarm_stats(time.time() - WEEK_S)
 
     @app.get("/api/heatmap")
     def heatmap() -> dict:

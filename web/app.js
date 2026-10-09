@@ -46,7 +46,7 @@ function render(freshId) {
 
     const status = document.createElement("div");
     status.className = "status";
-    status.textContent = STATUS_TR[a.status] || a.status;
+    status.textContent = statusText(a);
 
     li.append(top, reasons);
     const url = clipUrl(a);
@@ -60,8 +60,44 @@ function render(freshId) {
       li.append(link);
     }
     li.append(status);
+    if (a.level !== "red" && a.status === "pending") li.append(cardActions(a));
     return li;
   }));
+}
+
+// Kırmızıda "Onaylandı" (112 simülasyonu); turuncu/sarıda sadece "Görüldü" (112 ile ilgisi yok)
+function statusText(a) {
+  if (a.level !== "red" && a.status === "confirmed") return "Görüldü";
+  return STATUS_TR[a.status] || a.status;
+}
+
+// Turuncu/sarı kart düğmeleri. Kırmızı uyarı kendi modalını kullanır. Stil: .alert-actions / .alert-btn (C)
+function cardActions(a) {
+  const box = document.createElement("div");
+  box.className = "alert-actions";
+  for (const [kind, label] of [["confirm", "Gördüm"], ["dismiss", "Yanlış alarm"]]) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "alert-btn " + kind;
+    btn.textContent = label;
+    btn.addEventListener("click", () => cardAction(a.id, kind, box));
+    box.append(btn);
+  }
+  return box;
+}
+
+async function cardAction(id, kind, box) {
+  box.querySelectorAll("button").forEach((b) => { b.disabled = true; });
+  try {
+    const res = await fetch("/api/alerts/" + id + "/" + kind, { method: "POST" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    alerts.set(id, await res.json());
+    render(null);
+    scheduleStats();
+  } catch (e) {
+    console.error("işlem başarısız", e);
+    box.querySelectorAll("button").forEach((b) => { b.disabled = false; });
+  }
 }
 
 function upsert(alert, fresh) {
@@ -159,14 +195,31 @@ function renderWeekly(summary) {
   }));
 }
 
+// Haftalık tablonun altındaki tek satır. Eleman C'nin HTML'inde yoksa burada oluşturulur.
+function renderFalseAlarms(stats) {
+  let el = document.getElementById("falseAlarm");
+  if (!el) {
+    const table = document.getElementById("weekly");
+    if (!table) return;
+    el = document.createElement("p");
+    el.id = "falseAlarm";
+    el.className = "panel-note";
+    table.insertAdjacentElement("afterend", el);
+  }
+  el.hidden = stats.decided === 0;   // karar verilmiş uyarı yoksa oran anlamsız
+  el.textContent = "Yanlış alarm: " + stats.dismissed + " / " + stats.decided + " karar verilen uyarı";
+}
+
 async function refreshStats() {
   try {
-    const [counts, summary] = await Promise.all([
+    const [counts, summary, falseAlarms] = await Promise.all([
       fetch("/api/heatmap").then((r) => r.json()),
       fetch("/api/summary/weekly").then((r) => r.json()),
+      fetch("/api/summary/false-alarms").then((r) => r.json()),
     ]);
     drawHeatmap(counts);
     renderWeekly(summary);
+    renderFalseAlarms(falseAlarms);
   } catch (e) {
     console.error("istatistikler yüklenemedi", e);
   }
@@ -315,6 +368,32 @@ async function setupDemoMode() {
   });
 }
 
+// ---------- Canlı ses seviyesi (dB) ----------
+// Eleman C'nin index.html'inde: <div id="dbMeter" hidden><span id="dbValue"></span><i id="dbFill"></i></div>
+// Yoksa atlanır. Sunucu ses dedektörü çalışmıyorsa (--demo) /api/level available=false döner, eleman gizli kalır.
+const DB_MIN = 30, DB_MAX = 100;   // çubuğun gösterdiği aralık (dB)
+function dbPercent(db) { return Math.max(0, Math.min(1, (db - DB_MIN) / (DB_MAX - DB_MIN))) * 100; }
+
+function setupLevelMeter() {
+  const meter = document.getElementById("dbMeter");
+  if (!meter) return;
+  const value = document.getElementById("dbValue");
+  const fill = document.getElementById("dbFill");
+  async function tick() {
+    try {
+      const lv = await (await fetch("/api/level")).json();
+      meter.hidden = !lv.available;
+      if (!lv.available) return;
+      if (value) value.textContent = Math.round(lv.db) + " dB";
+      if (fill) fill.style.width = dbPercent(lv.db) + "%";
+      if (lv.threshold != null) meter.style.setProperty("--db-threshold", dbPercent(lv.threshold) + "%");
+      meter.dataset.over = lv.threshold != null && lv.db >= lv.threshold ? "1" : "0";  // CSS: eşik üstü vurgusu
+    } catch (e) { /* sunucu yanıt vermiyorsa son değer kalır */ }
+  }
+  tick();
+  setInterval(tick, 500);
+}
+
 // Uyarı listesini sunucudan çekip birleştirir. İlk yüklemede ve HER WebSocket bağlantısında çağrılır:
 // liste çekildikten sonra WebSocket açılana kadar (veya bağlantı koptuğu sürede) gelen uyarılar kaybolmasın.
 async function syncAlerts() {
@@ -364,3 +443,4 @@ function connect() {
 
 loadInitial().then(connect);
 setupDemoMode();
+setupLevelMeter();
