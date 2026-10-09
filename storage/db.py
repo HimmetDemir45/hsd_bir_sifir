@@ -113,6 +113,18 @@ class Storage:
             out.setdefault(r["zone_id"], {"yellow": 0, "orange": 0, "red": 0})[r["level"]] = r["n"]
         return out
 
+    def false_alarm_stats(self, since_ts: float | None = None) -> dict[str, int]:
+        """Yanlış alarm oranı için: dismissed (yanlış alarm), decided (karar verilmiş: confirmed+dismissed), total."""
+        rows = self._exec(
+            "SELECT status, COUNT(*) AS n FROM alerts WHERE created_at >= ? GROUP BY status", (since_ts or 0.0,))
+        by_status = {r["status"]: r["n"] for r in rows}
+        dismissed = by_status.get("dismissed", 0)
+        return {
+            "dismissed": dismissed,
+            "decided": dismissed + by_status.get("confirmed", 0),
+            "total": sum(by_status.values()),
+        }
+
     def heatmap(self) -> dict[str, int]:
         """bölge -> olay sayısı."""
         rows = self._exec("SELECT zone_id, COUNT(*) AS n FROM events GROUP BY zone_id")

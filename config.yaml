@@ -44,24 +44,27 @@ schedule:
 
 # ---------------- Detektörler ----------------
 weapon:
-  model: models/weapon.pt        # Roboflow weapon modeli
-  fallback_model: models/yolo11n.pt  # weapon.pt yoksa: COCO, sadece knife sınıfı (ilk çalıştırmada otomatik iner)
-  fallback_classes: {knife: knife}
-  # Weapon modelindeki sınıf adı (küçük harf) -> event tipi. Listede olmayan sınıflar yok sayılır.
-  class_map:
-    gun: gun
-    pistol: gun
-    handgun: gun
-    rifle: gun
-    weapon: gun
-    firearm: gun
-    knife: knife
-  min_conf: 0.6          # KIRMIZI için güven eşiği
+  # Birden fazla model birlikte çalışır; dosyası olmayan model uyarıyla atlanır.
+  # class_map: modelin sınıf adı (küçük harf) -> event tipi; listede olmayan sınıflar yok sayılır.
+  models:
+    # Tabanca: JoaoAssalim/Weapons-and-Knives-Detector-with-YOLOv8 (MIT, YOLOv8n), tools.modelleri_indir indirir.
+    # Bıçak sınıfı bu modelde zayıf (fotoğraf testi 1/7) -> bıçak COCO'dan.
+    - path: models/weapon_guns.pt
+      class_map: {guns: gun}
+    # Bıçak: COCO yolo11n (ilk çalıştırmada otomatik iner)
+    - path: models/yolo11n.pt
+      class_map: {knife: knife}
+  # Tip başına KIRMIZI güven eşiği. Tabanca 0.8: güvenlik kamerası görüntüsünde koyu nesneleri silah sanıyor
+  # (3/5 kare kuralıyla yanlış kırmızı: 0.6 -> %17, 0.7 -> %9, 0.8 -> %3 normal klip; Kavga.mp4'te sopa 0.7'de
+  # silah sanıldı). Tabanca fotoğrafı yakalama: 0.6 -> 9/11, 0.8 -> 4/11.
+  min_conf: {gun: 0.8, knife: 0.6}
   display_conf: 0.35     # bu ve üstü ekranda (gri) gösterilir; event üretmez
   window: 5              # son N kare
   min_hits: 3            # ...en az bu kadarında tespit
   emit_cooldown_s: 2.0   # aynı tip event'i detektör bu sıklıktan fazla basmaz (asıl dedup fusion'da)
-  every_n_frames: 1      # silah tespiti her karede
+  # Modeller karelere sırayla dağıtılır (kare başına tek model). İkisi birlikte FPS'i 13 -> 7-11'e düşürüp
+  # demo videosunda kavga tespitini kaybettirdi. Her tip yine sn'de ~7 kez kontrol edilir (window 5 ~ 0.7 sn).
+  alternate_models: true
 
 pose:
   model: models/yolo11n-pose.pt

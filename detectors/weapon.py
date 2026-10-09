@@ -1,9 +1,8 @@
 """Silah / bıçak tespiti (YOLO).
 
-- models/weapon.pt varsa onu kullanır (Roboflow weapon modeli), sınıfları config'deki class_map ile
-  gun/knife'a eşler.
-- Yoksa fallback: COCO yolo11n.pt ile sadece "knife" sınıfı.
-- Zamansal filtre: bir tip, son `window` karenin en az `min_hits`'inde conf >= min_conf ise Event üretir.
+- config weapon.models: birden fazla model birlikte çalışır (tabanca: models/weapon_guns.pt, bıçak: COCO yolo11n).
+  Her modelin sınıfları class_map ile gun/knife'a eşlenir; dosyası olmayan model uyarıyla atlanır.
+- Zamansal filtre: bir tip, son `window` karenin en az `min_hits`'inde conf >= min_conf[tip] ise Event üretir.
 
 Tek başına çalıştırma (webcam):
     python -m detectors.weapon
@@ -16,6 +15,7 @@ import queue
 import time
 from collections import deque
 from dataclasses import dataclass
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -53,61 +53,77 @@ class WeaponDetector:
         self.zone_id = zone_id
         self.out_queue = out_queue
 
-        self.model, class_map, self.using_fallback = self._load_model()
-        # model sınıf id -> event tipi; sadece eşlenen sınıflar tahmin edilir (daha hızlı)
-        self.id_to_type: dict[int, str] = {
-            cid: class_map[name.lower()]
-            for cid, name in self.model.names.items()
-            if name.lower() in class_map
-        }
-        if not self.id_to_type:
-            raise RuntimeError(
-                f"Modelin sınıfları ({list(self.model.names.values())}) config'deki "
-                f"weapon.class_map ile eşleşmiyor."
-            )
+        # [(model, sınıf id -> event tipi)]; sadece eşlenen sınıflar tahmin edilir (daha hızlı)
+        self.models: list[tuple[YOLO, dict[int, str]]] = self._load_models()
+        if not self.models:
+            raise RuntimeError("weapon.models içindeki hiçbir model yüklenemedi (python -m tools.modelleri_indir)")
 
-        self.min_conf: float = self.cfg["min_conf"]
+        self.min_conf: dict[str, float] = dict(self.cfg["min_conf"])
         self.display_conf: float = self.cfg["display_conf"]
         self.min_hits: int = self.cfg["min_hits"]
         self.cooldown: float = self.cfg["emit_cooldown_s"]
-        types = set(self.id_to_type.values())
+        types = {t for _, id_to_type in self.models for t in id_to_type.values()}
         self.history: dict[str, deque[float]] = {t: deque(maxlen=self.cfg["window"]) for t in types}
-        self.last_emit: dict[str, float] = {t: 0.0 for t in types}
+        # -1e9 (0.0 değil): zaman 0'dan başlayan kaynakta (değerlendirme) ilk 2 sn hiç event basılmıyordu
+        self.last_emit: dict[str, float] = {t: -1e9 for t in types}
+        self._frame_idx = 0
+        self._evaluated: set[str] | None = None          # None: update() doğrudan çağrıldı (testler) -> tüm tipler
+        self._last_by_model: dict[int, list[Detection]] = {}
 
-    def _load_model(self) -> tuple[YOLO, dict[str, str], bool]:
-        primary = resolve_path(self.cfg["model"])
-        if primary.is_file():
-            class_map = {k.lower(): v for k, v in self.cfg["class_map"].items()}
-            return YOLO(str(primary)), class_map, False
+    def _load_models(self) -> list[tuple[YOLO, dict[int, str]]]:
+        loaded = []
+        for spec in self.cfg["models"]:
+            path = resolve_path(spec["path"])
+            class_map = {k.lower(): v for k, v in spec["class_map"].items()}
+            # COCO gibi ultralytics'in bildiği modeller dosya yoksa kendisi indirir; diğerleri atlanır
+            if not path.is_file() and not path.name.startswith(("yolo11", "yolov8")):
+                print(f"[weapon] UYARI: {path.name} yok -> {sorted(set(class_map.values()))} tespiti kapalı "
+                      f"(python -m tools.modelleri_indir)")
+                continue
+            path.parent.mkdir(parents=True, exist_ok=True)
+            model = YOLO(str(path))
+            id_to_type = {cid: class_map[name.lower()] for cid, name in model.names.items()
+                          if name.lower() in class_map}
+            if not id_to_type:
+                print(f"[weapon] UYARI: {path.name} sınıfları {list(model.names.values())} class_map ile eşleşmiyor, atlandı")
+                continue
+            loaded.append((model, id_to_type))
+        return loaded
 
-        fallback = resolve_path(self.cfg["fallback_model"])
-        fallback.parent.mkdir(parents=True, exist_ok=True)
-        print(f"[weapon] {primary.name} bulunamadı -> fallback {fallback.name} (sadece bıçak)")
-        class_map = {k.lower(): v for k, v in self.cfg["fallback_classes"].items()}
-        return YOLO(str(fallback)), class_map, True
+    def describe(self) -> str:
+        return ", ".join(f"{Path(m.ckpt_path or '').name or 'model'}->{sorted(set(t.values()))}" for m, t in self.models)
 
     def detect(self, frame: np.ndarray) -> list[Detection]:
-        result = self.model.predict(
-            frame,
-            imgsz=self.imgsz,
-            conf=self.display_conf,
-            classes=list(self.id_to_type),
-            device=self.device,
-            verbose=False,
-        )[0]
-        apply_thread_limit(self._full_cfg)  # ultralytics ilk tahminde thread sayısını eziyor: her tahminden sonra kontrol
+        """weapon.alternate_models açıksa modeller karelere sırayla dağıtılır (kare başına tek model).
+        İki model birlikte kare başına ~95 ms sürüp FPS'i 13 -> 7-11'e düşürdü ve kavga tespiti (FPS'e duyarlı)
+        demo videosunda kayboldu. Her tip yine sn'de ~7 kez kontrol edilir. Çizim için diğer modelin son
+        sonuçları da döner; zamansal pencereye (update) sadece bu karede çalışan modelin tipleri girer."""
+        self._frame_idx += 1
+        alternate = self.cfg.get("alternate_models", False) and len(self.models) > 1
         detections: list[Detection] = []
-        for box in result.boxes:
-            cid = int(box.cls)
-            x1, y1, x2, y2 = (int(v) for v in box.xyxy[0].tolist())
-            detections.append(
-                Detection(
-                    type=self.id_to_type[cid],
-                    label=self.model.names[cid],
-                    confidence=float(box.conf),
-                    box=(x1, y1, x2, y2),
-                )
-            )
+        self._evaluated = set()
+        for i, (model, id_to_type) in enumerate(self.models):
+            if alternate and self._frame_idx % len(self.models) != i:
+                detections += self._last_by_model.get(i, [])   # sadece çizim için
+                continue
+            self._evaluated.update(id_to_type.values())
+            result = model.predict(
+                frame,
+                imgsz=self.imgsz,
+                conf=self.display_conf,
+                classes=list(id_to_type),
+                device=self.device,
+                verbose=False,
+            )[0]
+            fresh = []
+            for box in result.boxes:
+                cid = int(box.cls)
+                x1, y1, x2, y2 = (int(v) for v in box.xyxy[0].tolist())
+                fresh.append(Detection(type=id_to_type[cid], label=model.names[cid],
+                                       confidence=float(box.conf), box=(x1, y1, x2, y2)))
+            self._last_by_model[i] = fresh
+            detections += fresh
+        apply_thread_limit(self._full_cfg)  # ultralytics ilk tahminde thread sayısını eziyor: her tahminden sonra kontrol
         return detections
 
     def update(self, detections: list[Detection], now: float | None = None) -> list[Event]:
@@ -115,9 +131,11 @@ class WeaponDetector:
         now = time.time() if now is None else now
         events: list[Event] = []
         for etype, hist in self.history.items():
+            if self._evaluated is not None and etype not in self._evaluated:
+                continue   # bu karede bu tipin modeli çalışmadı (sırayla çalıştırma)
             best = max((d.confidence for d in detections if d.type == etype), default=0.0)
             hist.append(best)
-            hits = [c for c in hist if c >= self.min_conf]
+            hits = [c for c in hist if c >= self.min_conf[etype]]
             if len(hits) >= self.min_hits and now - self.last_emit[etype] >= self.cooldown:
                 self.last_emit[etype] = now
                 event = Event(
@@ -140,7 +158,7 @@ class WeaponDetector:
 
     def draw(self, frame: np.ndarray, detections: list[Detection]) -> np.ndarray:
         for d in detections:
-            strong = d.confidence >= self.min_conf
+            strong = d.confidence >= self.min_conf.get(d.type, 1.01)
             color = COLORS.get(d.type, (0, 0, 255)) if strong else WEAK_COLOR
             x1, y1, x2, y2 = d.box
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2 if strong else 1)
@@ -169,8 +187,7 @@ def main() -> None:
 
     detector = WeaponDetector(cfg, camera_id=cam_cfg["id"], zone_id=cam_cfg["zone_id"])
     camera = Camera(args.source)
-    mode = "FALLBACK (sadece bıçak)" if detector.using_fallback else "weapon.pt"
-    print(f"[weapon] model={mode} sınıflar={sorted(set(detector.id_to_type.values()))} "
+    print(f"[weapon] modeller: {detector.describe()} eşikler={detector.min_conf} "
           f"device={cfg['general']['device']} imgsz={cfg['general']['imgsz']}  (çıkış: q / Ctrl+C)")
 
     min_dt = 1.0 / cfg["general"]["target_fps"]

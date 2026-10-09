@@ -64,6 +64,22 @@ kişi en fazla 2 sn yerde görünüyor); şart yalnızca yavaşça uzanmanın al
   Kendi silah kayıtlarımız 0.41 / 0.50 / 0.59 / 0.80: 0.5'te 3/4, 0.4'te 4/4. Kırmızıda insan onayı olduğundan
   kaçırmamak öncelikli: 0.4 korunuyor. Bilinen risk: kantinde konserve açma, havai fişek.
 
+## Silah / bıçak (görüntü)
+Tabanca için [JoaoAssalim/Weapons-and-Knives-Detector-with-YOLOv8](https://github.com/JoaoAssalim/Weapons-and-Knives-Detector-with-YOLOv8)
+modeli (MIT, YOLOv8n) eklendi; bıçak COCO'da kaldı (Joao'nun bıçak sınıfı fotoğraf testinde 1/7). Model dosyası
+pickle olduğu için yüklemeden önce statik tarandı (yalnız torch/ultralytics/collections) ve SHA-256 ile sabitlendi.
+Test: Wikimedia Commons serbest lisanslı 11 tabanca + 7 bıçak fotoğrafı; yanlış alarm için silahsız güvenlik
+kamerası klipleri (Surveillance Fight) ve demo videoları. 5 karenin 3'ü kuralıyla:
+
+| tabanca eşiği | tabanca fotoğrafı | yanlış kırmızı: normal klip | yanlış kırmızı: kavga klibi | Kavga.mp4 (sopa) |
+|---|---|---|---|---|
+| 0.6 | 9/11 | 26/150 | 40/150 | silah sanıldı |
+| 0.7 | 7/11 | 13/150 | 19/150 | silah sanıldı |
+| **0.8 (seçilen)** | **4/11** | **4/150** | **4/150** | yok |
+
+Bıçak (COCO, 0.6): fotoğrafların 2/7'si. İki model birlikte kare başına ~95 ms sürüp FPS'i 13 → 7-11'e indirdi ve
+demo videosunda kavga tespiti kayboldu; modeller karelere sırayla dağıtılınca ~27 ms, FPS 13-16, kavga geri geldi.
+
 ## Sınırlar
 - Veri setleri okul ortamı değil; sonuçlar mutlak doğruluk değil, **gösterge**.
 - Kavga klipleri çok kısa (2-3 sn); düşme klipleri düşmeden hemen sonra bitiyor. Her ikisi de süreye dayalı

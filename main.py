@@ -113,7 +113,7 @@ def camera_loop(cfg: dict, cam_cfg: dict, source: str, events: "queue.Queue[Even
 
 
 def audio_loop(cfg: dict, zone_id: str, audio_src: str, events: "queue.Queue[Event]",
-               stop: threading.Event, delay_s: float = 0.0) -> None:
+               stop: threading.Event, delay_s: float = 0.0, holder: dict | None = None) -> None:
     try:
         from detectors.audio_cls import AudioDetector
     except ImportError:
@@ -123,6 +123,8 @@ def audio_loop(cfg: dict, zone_id: str, audio_src: str, events: "queue.Queue[Eve
         # "mic" -> config'deki audio.input (mikrofon); aksi halde wav dosyası (gerçek zamanlı oynatılır)
         source = None if audio_src == "mic" else audio_src
         detector = AudioDetector(cfg, zone_id, events)  # model yüklemesi bekleme süresinin içinde yapılır
+        if holder is not None:
+            holder["detector"] = detector  # dashboard'daki ses seviyesi (/api/level) buradan okur
         if delay_s > 0:
             print(f"[audio] {delay_s:g} sn sonra başlayacak (tarayıcıyı açmak için zaman)", flush=True)
             if stop.wait(delay_s):
@@ -168,6 +170,7 @@ def main() -> None:
     storage = Storage(args.db)
     frames, hub = FrameStore(), Hub()
     pose_holder: dict = {}  # zone_id -> PoseDetector (kalabalık bilgisi için)
+    audio_holder: dict = {}  # "detector" -> AudioDetector (ses seviyesi göstergesi için)
 
     notifier = Notifier(cfg)
     snap_levels = set(cfg["privacy"]["record_clips_for"])  # snapshot/klip sadece turuncu-kırmızıda
@@ -259,7 +262,7 @@ def main() -> None:
     if args.audio and not args.demo:
         threads.append(threading.Thread(target=audio_loop, name="audio", daemon=True,
                                         args=(cfg, cam_cfg["zone_id"], args.audio, events, stop,
-                                              args.audio_delay)))
+                                              args.audio_delay, audio_holder)))
 
     def do_demo_reset() -> None:
         """Sadece --demo: senaryoyu durdur, kayıtları ve hafızaları temizle, istemcilere bildir, baştan başlat."""
@@ -278,7 +281,20 @@ def main() -> None:
         print("[demo] yeniden başlatıldı", flush=True)
         demo_ctl.start()
 
-    app = create_app(cfg, storage, frames, hub, notifier, demo_reset=do_demo_reset if demo_ctl else None)
+    def level_source() -> dict | None:
+        """Ses dedektörü çalışıyorsa anlık dB, eşik ve sınıf skorları; yoksa None."""
+        det = audio_holder.get("detector")
+        if det is None:
+            return None
+        try:
+            threshold = float(det.current_db_threshold(time.time()))
+        except Exception:  # eşik okunamazsa çubuk yine de çalışsın
+            threshold = None
+        return {"db": round(float(det.last_db), 1), "threshold": threshold,
+                "scores": {k: round(float(v), 2) for k, v in det.last_scores.items()}}
+
+    app = create_app(cfg, storage, frames, hub, notifier, demo_reset=do_demo_reset if demo_ctl else None,
+                     level_source=level_source)
     server = uvicorn.Server(uvicorn.Config(app, host=cfg["api"]["host"], port=cfg["api"]["port"],
                                            log_level="warning"))
     threads.append(threading.Thread(target=server.run, name="api", daemon=True))
