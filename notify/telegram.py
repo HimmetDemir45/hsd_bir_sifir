@@ -70,6 +70,14 @@ class Notifier:
     def send_confirmation(self, alert: dict[str, Any]) -> None:
         self._dispatch(self.format_confirmation(alert), None)
 
+    def format_unconfirmed(self, alert: dict[str, Any], timeout_s: float) -> str:
+        return (f"⏰ KIRMIZI UYARI {int(timeout_s)} sn'dir ONAYLANMADI — {self._zone_name(alert['zone_id'])}\n"
+                "Lütfen ekrandan karar verin. Otomatik arama / polis bildirimi yapılmaz.")
+
+    def send_unconfirmed(self, alert: dict[str, Any], timeout_s: float) -> None:
+        """Zaman aşımı: sadece EK BİLDİRİM (arama yok)."""
+        self._dispatch(self.format_unconfirmed(alert, timeout_s), alert.get("snapshot"))
+
     def _dispatch(self, text: str, snapshot: str | None) -> None:
         print(f"[bildirim] {text.replace(chr(10), ' | ')}", flush=True)
         if not self.enabled:
@@ -91,6 +99,10 @@ class Notifier:
                 r = requests.post(API.format(token=self.token, method="sendMessage"),
                                   data={"chat_id": self.chat_id, "text": text}, timeout=TIMEOUT_S)
             if not r.ok:
-                print(f"[telegram] HTTP {r.status_code}: {r.text[:120]}")
+                print(f"[telegram] HTTP {r.status_code}: {self._redact(r.text[:120])}")
         except Exception as e:  # internet yok vb.: sadece logla
-            print(f"[telegram] gönderilemedi: {e!r}")
+            print(f"[telegram] gönderilemedi: {type(e).__name__}: {self._redact(str(e))[:200]}")
+
+    def _redact(self, text: str) -> str:
+        """requests hata metinleri URL'yi (/bot<TOKEN>/...) içerir: token asla log'a yazılmasın."""
+        return text.replace(self.token, "<token>") if self.token else text

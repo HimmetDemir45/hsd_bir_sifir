@@ -77,6 +77,17 @@ class Storage:
     def update_alert_clip(self, alert_id: str, clip: str) -> None:
         self._exec("UPDATE alerts SET clip=? WHERE id=?", (clip, alert_id))
 
+    def append_reason(self, alert_id: str, reason: str) -> dict[str, Any] | None:
+        """Mevcut uyarının sebeplerine metin ekler (aynı metin zaten varsa eklemez)."""
+        alert = self.get_alert(alert_id)
+        if alert is None:
+            return None
+        if reason not in alert["reasons"]:
+            alert["reasons"].append(reason)
+            self._exec("UPDATE alerts SET reasons=? WHERE id=?",
+                       (json.dumps(alert["reasons"], ensure_ascii=False), alert_id))
+        return alert
+
     def get_alert(self, alert_id: str) -> dict[str, Any] | None:
         rows = self._exec("SELECT * FROM alerts WHERE id=?", (alert_id,))
         return _row_to_alert(rows[0]) if rows else None

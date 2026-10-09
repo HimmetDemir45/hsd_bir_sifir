@@ -28,6 +28,7 @@ from core.config import load_config, resolve_path
 from core.schema import Alert, Event
 from fusion import demo
 from fusion.engine import FusionEngine
+from fusion.escalation import RedTimeoutWatcher
 from notify.telegram import Notifier
 from storage.db import Storage
 
@@ -137,11 +138,16 @@ def main() -> None:
                     help="kare uzun kenarı üst sınırı, piksel (config general.max_frame_side'ı ezer, 0 = kapalı)")
     ap.add_argument("--fresh", action="store_true", help="başlamadan önce DB'yi sil (temiz demo)")
     ap.add_argument("--port", type=int, default=None, help="config api.port'u ezer (8000 doluysa)")
+    ap.add_argument("--host", default=None,
+                    help="config api.host'u ezer; varsayılan 127.0.0.1 (sadece bu bilgisayar). "
+                         "Telefondan göstermek için 0.0.0.0")
     args = ap.parse_args()
 
     cfg = load_config()
     if args.port:
         cfg["api"]["port"] = args.port
+    if args.host:
+        cfg["api"]["host"] = args.host
     if args.max_side is not None:
         cfg["general"]["max_frame_side"] = args.max_side
     cam_cfg = cfg["cameras"][0]
@@ -195,6 +201,23 @@ def main() -> None:
         except Exception as e:  # klip hatası uyarı akışını bozmasın
             print(f"[clip] kaydedilemedi: {e!r}")
 
+    # Onaylanmayan kırmızı: SADECE ek bildirim + ekranda uyarı (gerçek arama yok). Varsayılan KAPALI.
+    red_watch = RedTimeoutWatcher(cfg)
+
+    def red_timeout_loop() -> None:
+        while not stop.wait(1.0):
+            for aid in red_watch.due(time.time(), lambda i: (storage.get_alert(i) or {}).get("status")):
+                try:
+                    note = f"Onay bekleniyor: {int(red_watch.timeout_s)} sn geçti (ek bildirim gönderildi)"
+                    alert = storage.append_reason(aid, note)
+                    if alert:
+                        latest = storage.get_alert(aid) or alert
+                        hub.publish(latest)
+                        notifier.send_unconfirmed(latest, red_watch.timeout_s)
+                        print(f"[ESKALASYON] {latest['zone_id']}: {note}", flush=True)
+                except Exception as e:  # zaman aşımı hatası ana akışı bozmasın
+                    print(f"[eskalasyon] hata: {e!r}")
+
     def on_alert(alert: Alert) -> None:
         take_snapshot(alert)
         storage.save_alert(alert)
@@ -204,6 +227,7 @@ def main() -> None:
         latest = storage.get_alert(alert.id) or alert.to_dict()  # DB'deki güncel status ile
         hub.publish(latest)
         notifier.send_alert(latest)
+        red_watch.track(alert.id, alert.level, time.time())
         print(f"[ALERT {alert.level.upper()}] {alert.zone_id}: {'; '.join(alert.reasons)}", flush=True)
 
     def crowd() -> dict[str, int]:
@@ -212,6 +236,10 @@ def main() -> None:
     engine = FusionEngine(cfg, events, on_alert, crowd_size_by_zone=crowd, on_event=storage.save_event)
 
     threads = [threading.Thread(target=engine.run, args=(stop,), name="fusion", daemon=True)]
+    if red_watch.enabled:
+        print(f"[eskalasyon] AÇIK: kırmızı uyarı {int(red_watch.timeout_s)} sn onaylanmazsa ek bildirim "
+              "(gerçek arama yok)")
+        threads.append(threading.Thread(target=red_timeout_loop, name="red-timeout", daemon=True))
     if args.demo:
         frames.set(cam_cfg["id"], _placeholder_jpeg("DEMO modu (sahte olaylar)"))
         threads.append(threading.Thread(target=demo.feed, args=(events, stop, args.speed),
@@ -232,7 +260,9 @@ def main() -> None:
 
     for t in threads:
         t.start()
-    print(f"Dashboard: http://localhost:{cfg['api']['port']}   (çıkış: Ctrl+C)")
+    host = cfg["api"]["host"]
+    print(f"Dashboard: http://localhost:{cfg['api']['port']}   (çıkış: Ctrl+C)"
+          + ("" if host in ("127.0.0.1", "localhost") else f"   [ağdan erişilebilir: {host}]"))
     try:
         while not stop.is_set():
             time.sleep(0.5)
