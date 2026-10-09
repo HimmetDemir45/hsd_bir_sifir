@@ -47,5 +47,7 @@ main.lower { padding-top: 0; }
 .btn:disabled { opacity: .5; cursor: wait; }
 .modal-result { font-size: 18px; }
 .modal-result p { margin: 8px 0; }
+.clip-link { display: inline-block; margin: 4px 0; color: #7db8ff; font-size: 14px; text-decoration: underline; }
+.alert .clip-link { font-size: 13px; }
 .alert.fresh { animation: flash 1.2s ease-out; }
 @keyframes flash { from { background: #3a4258; } to { background: #232938; } }
