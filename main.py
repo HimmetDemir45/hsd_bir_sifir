@@ -29,11 +29,17 @@ try:  # Kişi A'nın privacy/blur.py'si; hazır değilse None
 except ImportError:
     blur_faces = None
 
+try:  # Kişi A'nın sources/clip_buffer.py'si; hazır değilse klip kaydı yok
+    from sources.clip_buffer import ClipBuffer
+except ImportError:
+    ClipBuffer = None
+
 JPEG_QUALITY = 70
 
 
 def camera_loop(cfg: dict, cam_cfg: dict, source: str, events: "queue.Queue[Event]",
-                frames: FrameStore, pose_holder: dict, stop: threading.Event) -> None:
+                frames: FrameStore, pose_holder: dict, stop: threading.Event,
+                clip_buf: "ClipBuffer | None" = None) -> None:
     # Ağır importlar sadece gerçek kamera modunda (--demo bunlara bağımlı olmasın)
     from detectors.pose import PoseDetector
     from detectors.weapon import WeaponDetector
@@ -59,6 +65,8 @@ def camera_loop(cfg: dict, cam_cfg: dict, source: str, events: "queue.Queue[Even
             pose.draw(frame, tracks)
             if blur_faces is not None:
                 frame = blur_faces(frame)  # yayın ve snapshot'tan ÖNCE (gizlilik ilkesi)
+            if clip_buf is not None:
+                clip_buf.add(frame, camera.last_ts)  # sadece bulanık kareler
             ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
             if ok:
                 frames.set(cam_id, buf.tobytes())
@@ -123,9 +131,32 @@ def main() -> None:
         path.write_bytes(item[1])
         alert.snapshot = f"{cfg['general']['snapshot_dir']}/{path.name}"
 
+    # Klip: yalnızca bulanıklaştırma varken ve turuncu/kırmızıda (gizlilik ilkesi)
+    clip_buf = None
+    if ClipBuffer is not None and blur_faces is not None and not args.demo:
+        clip_buf = ClipBuffer(cfg["alerts"]["orange"]["clip_seconds"])
+    elif not args.demo:
+        print("[clip] ClipBuffer ve/veya blur_faces yok -> klip kaydı kapalı (A'dan bekleniyor).")
+    clip_dir = resolve_path(cfg["general"]["clip_dir"])
+    clipped: set[str] = set()
+
+    def save_clip(alert_id: str) -> None:
+        try:
+            clip_dir.mkdir(parents=True, exist_ok=True)
+            path = clip_buf.save(str(clip_dir / f"{alert_id}.mp4"))
+            storage.update_alert_clip(alert_id, path)
+            latest = storage.get_alert(alert_id)
+            if latest:
+                hub.publish(latest)
+        except Exception as e:  # klip hatası uyarı akışını bozmasın
+            print(f"[clip] kaydedilemedi: {e!r}")
+
     def on_alert(alert: Alert) -> None:
         take_snapshot(alert)
         storage.save_alert(alert)
+        if clip_buf is not None and alert.level in snap_levels and alert.id not in clipped:
+            clipped.add(alert.id)
+            threading.Thread(target=save_clip, args=(alert.id,), daemon=True).start()
         latest = storage.get_alert(alert.id) or alert.to_dict()  # DB'deki güncel status ile
         hub.publish(latest)
         notifier.send_alert(latest)
@@ -145,7 +176,7 @@ def main() -> None:
         threads.append(threading.Thread(
             target=camera_loop, name="camera", daemon=True,
             args=(cfg, cam_cfg, args.source if args.source is not None else str(cam_cfg["source"]),
-                  events, frames, pose_holder, stop)))
+                  events, frames, pose_holder, stop, clip_buf)))
     if args.audio and not args.demo:
         threads.append(threading.Thread(target=audio_loop, name="audio", daemon=True,
                                         args=(cfg, cam_cfg["zone_id"], args.audio, events, stop)))
