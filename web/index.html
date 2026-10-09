@@ -40,12 +40,10 @@
     <strong>Sunucu bağlantısı koptu.</strong> Yeniden bağlanılıyor… Bu sırada yeni uyarılar ekrana gelmez.
   </div>
 
-  <main>
-    <section class="video">
-      <div class="panel-head">
-        <h2>Canlı görüntü</h2>
-        <span class="panel-meta">Kamera 1 · yüzler bulanık</span>
-      </div>
+  <!-- Bento ızgarası. Dev rakam karoları DOM'da listeden SONRA gelir: CSS sayaçları (counter)
+       listedeki kartları seviyeye göre sayar ve karolarda gösterir; JS gerekmez. Görsel sıra grid-area ile. -->
+  <main class="bento">
+    <section class="tile video">
       <div class="cam-wrap">
         <div class="cam-wait" aria-hidden="true">
           <span class="cam-wait-title">Görüntü bekleniyor</span>
@@ -53,19 +51,38 @@
         </div>
         <img id="cam" src="/video/cam1" alt="Canlı kamera görüntüsü (yüzler bulanık)">
       </div>
-    </section>
-    <section class="feed">
-      <div class="panel-head">
-        <h2 id="feedTitle">Uyarılar <span id="count" class="count-badge" aria-live="polite" aria-atomic="true"></span></h2>
+      <div class="cam-overlay" aria-hidden="true">
+        <span class="live-chip">Canlı · Kamera 1</span>
+        <span class="blur-chip">Yüzler bulanık</span>
       </div>
-      <div class="roster-head" aria-hidden="true"><span>Saat</span><span>Seviye · bölge · olay</span></div>
+    </section>
+
+    <section class="tile feed">
+      <div class="tile-head">
+        <h2 id="feedTitle">Canlı akış <span id="count" class="count-badge" aria-live="polite" aria-atomic="true"></span></h2>
+        <span class="tile-meta">En yeni üstte</span>
+      </div>
       <ul id="alerts" aria-labelledby="feedTitle"></ul>
     </section>
-  </main>
-  <main class="lower">
-    <section class="plan-panel">
-      <div class="panel-head">
-        <h2>Kat planı: olay yoğunluğu</h2>
+
+    <section class="tile stat stat-total" aria-label="Listedeki uyarı sayısı">
+      <span class="stat-label">Uyarı</span>
+      <span class="stat-num" data-counter="all"></span>
+      <span class="stat-sub">listede, tüm seviyeler</span>
+    </section>
+
+    <section class="tile stat stat-levels" aria-label="Seviyelere göre uyarı sayısı">
+      <span class="stat-label">Seviyeler</span>
+      <ol class="level-bars">
+        <li class="lb red"><span class="lb-num" data-counter="red"></span><span class="lb-name">Kırmızı</span></li>
+        <li class="lb orange"><span class="lb-num" data-counter="orange"></span><span class="lb-name">Turuncu</span></li>
+        <li class="lb yellow"><span class="lb-num" data-counter="yellow"></span><span class="lb-name">Sarı</span></li>
+      </ol>
+    </section>
+
+    <section class="tile plan-panel">
+      <div class="tile-head">
+        <h2>Kat planı · olay yoğunluğu</h2>
         <div class="heat-legend" role="img" aria-label="Renk ölçeği: sarı az, kırmızı çok olay">
           <span>Az</span><i class="heat-bar"></i><span>Çok</span>
         </div>
@@ -75,10 +92,10 @@
       </div>
       <p class="panel-note"><strong>Tüm zamanlar · algılama sayısı.</strong> Renk, her bölgedeki tespitleri (uyarıya dönüşmeyenler dahil) en yoğun bölgeye göre gösterir.</p>
     </section>
-    <section class="weekly-panel">
-      <div class="panel-head">
+    <section class="tile weekly-panel">
+      <div class="tile-head">
         <h2>Haftalık özet</h2>
-        <span class="panel-meta"><strong>Son 7 gün · uyarı sayısı</strong></span>
+        <span class="tile-meta"><strong>Son 7 gün · uyarı sayısı</strong></span>
       </div>
       <table id="weekly">
         <thead><tr><th scope="col">Bölge</th><th scope="col" class="y">Sarı</th><th scope="col" class="o">Turuncu</th><th scope="col" class="r">Kırmızı</th></tr></thead>
