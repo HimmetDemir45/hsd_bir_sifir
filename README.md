@@ -27,7 +27,7 @@ OpenCV `4.14`'e sabittir: 5.0 pip paketinde Haar cascade dosyaları yok. Eski ku
 
 ## Öğrenilmiş modeller (özet)
 
-Ayrıntı, tablolar ve grafikler: [docs/DEGERLENDIRME.md](docs/DEGERLENDIRME.md). Veri setleri lisans gereği git'te
+Ayrıntı, tablolar ve grafikler: [docs/DEGERLENDIRME.md](docs/DEGERLENDIRME.md). Sunum için teknik özet (teknolojiler, veri setleri, eğitim, jüri soruları): [docs/TEKNIK_OZET.md](docs/TEKNIK_OZET.md). Veri setleri lisans gereği git'te
 yok (repo dışında `../hsd_datasets/`).
 
 | Model | Veri | Sonuç |
