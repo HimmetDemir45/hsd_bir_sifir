@@ -110,9 +110,10 @@ pose:
     min_consecutive: 1         # 1: eğitimdeki ölçümle aynı (klip kararı = en yüksek pencere); 2 raporlanandan az yakalıyordu
     # Modele EK "hızlı temas" kuralı (yumruk/itme): bilek karşı kişinin kutusuna wrist_d (kişi boyu) kadar yakın VE
     # kol hızı >= limb_speed (boy/sn), aynı karede; span_s içinde min_windows pencerede -> kavga.
-    # Ölçüm: canli.mp4 itişme/vurma %65, boğuşma %83 pencere; bıçak gösterme/koşma/kendi düşme %0.
-    # Görülmemiş normal klip yanlış alarmı: Surveillance %2, Movies %0, RLVS %18 (kalabalık spor/sarılma).
-    strike: {enabled: true, wrist_d: 0.1, limb_speed: 2.0, min_windows: 2, span_s: 3.0}
+    # limb_speed 2.0 -> 1.2: canlı kamera ~7 FPS, poz ~3.5/sn; itişmede temas anında kol hızı 1.1-1.5 ölçüldü (sakin
+    # dururken <= 0.9). 3.5/sn'de: canli.mp4 itişme/vurma %57 pencere (2.0'da %35), bıçak gösterme/koşma/kendi düşme %0;
+    # görülmemiş normal klip yanlış alarmı Surveillance %1, Movies %0, RLVS %13 (kalabalık spor/sarılma). veri_demo normal 0/6.
+    strike: {enabled: true, wrist_d: 0.1, limb_speed: 1.2, min_windows: 2, span_s: 3.0}
   crowd:
     min_people: 4
     radius_ratio: 1.5          # kişi boyu cinsinden kümelenme yarıçapı
