@@ -20,7 +20,8 @@ OkulKalkan, okul kameralarından ve mikrofonundan gelen görüntü + sesi analiz
 - **Detektörler** (`detectors/`, `ml/`): **Silah/bıçak** için kendi eğittiğimiz YOLO11n (`ml/silah_v2.pt`, Dangerous Items seti,
   CC BY 4.0; ince ayar için silahsız güvenlik kamerası kareleri). **Poz**: YOLO11n-pose, 17 keypoint. **Kavga**:
   iskelet pencerelerinden 46 özellik (`ml/pose_features.py`) + gradient boosting sınıflandırıcı (`ml/kavga_model.joblib`),
-  `pose.fight_model.enabled` açıkken kararı model verir; model dosyası yoksa elle yazılmış kural (yakınlık + kol hızı) devreye girer.
+  `pose.fight_model.enabled` açıkken kavga = **model VEYA "hızlı temas" kuralı** (bilek karşı kişinin kutusunda ve kol hızlı, kısa
+  süre içinde tekrar eden pencereler: yumruk/itme); model yoksa veya yüklenemezse eski kural (yakınlık + kol hızı) devreye girer.
   **Düşme, koşuşma, kalabalık** kural tabanlı. **Ses**: EfficientAT + YAMNet + dB.
 - **Event** (detektör → fusion): `source`, `type` (gun/knife/fight/fall/running/scream/shout/gunshot/glass), `confidence`,
   `camera_id`, `zone_id`, `ts`. **Alert** (fusion → API/DB/Telegram): `level`, `reasons` (Türkçe metin), `zone_id`,
@@ -75,6 +76,10 @@ gösterge):
 - Gerçek bir sınıf kaydında (kameraya çok yakın, sahnelenmiş) genelleme zayıf kaldı: boğuşma pencerelerinin %17'si, itişmenin %2'si.
 - Silah modeli veri setine dışarıdan bakınca zayıflıyor: dış fotoğraflarda tabanca 4/11, bıçak 2/7.
 - Eğitim verisi okul kamerası açısından değil; okulda çekilmiş örnekler en büyük iyileştirme olurdu.
+- Düşmede "ani düşüş" şartı kapalı (`pose.fall.require_sudden: false`): yavaşça yere yatma da düşme sayılabilir, yani
+  yanlış alarm riski var. Kavgadaki "hızlı temas" kuralı da kol hızı eşiğini düşük tutuyor (1,2 boy/sn).
+- Sunum demosunda tek video, parçalara göre farklı bölgeler olarak gösteriliyor (`<video>.zones.json`, `sources/zone_timeline.py`);
+  gerçek kurulumda her kameranın tek bir bölgesi olur.
 
 **Kurulum notu:** Kavga modeli `scikit-learn` ister (`requirements.txt`'te sabit sürümle). Yeni bir makinede
 `pip install -r requirements.txt` çalıştırılmalı ve açılışta `[pose] kavga modeli: ...` satırı görülmelidir.
